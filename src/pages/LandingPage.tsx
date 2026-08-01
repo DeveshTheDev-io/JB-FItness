@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { X } from 'lucide-react';
 
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop';
 const SECTION2_IMAGE = 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=1470&auto=format&fit=crop';
@@ -260,6 +261,7 @@ export default function LandingPage() {
   const [showSplash, setShowSplash] = useState(true);
   const [showTrialModal, setShowTrialModal] = useState(false);
   const [trialForm, setTrialForm] = useState({ name: '', phone: '', email: '' });
+  const [selectedTopic, setSelectedTopic] = useState<'muscle' | 'nutrition' | null>(null);
   const isMobile = useIsMobile();
   const navigate = useNavigate();
 
@@ -444,6 +446,32 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Coaches Section */}
+      <section id="coaches" className="w-full flex flex-col px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2 pt-10">
+        <div className="flex flex-col gap-1.5 md:gap-2">
+          <div className="rounded-xl md:rounded-2xl bg-black p-5 md:p-10 flex flex-col justify-center items-center text-center">
+            <h2 className="text-[clamp(2.5rem,5vw,5rem)] font-bold text-white leading-tight">Expert Coaches</h2>
+            <p className="text-white/70">Train with the best to achieve your ultimate goals</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5 md:gap-2">
+            {[
+              { name: 'Sushant Agrawal', spec: 'Powerlifting Specialist', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/Sushant.jpeg_202608011758.jpeg' },
+              { name: 'Nidhi Singh', spec: 'Functional Training', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/Nidhi.jpeg_202608011801.jpeg' },
+              { name: 'Bhavendra', spec: 'Bodybuilding Pro', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/WhatsApp_Image_2026-08-01_at_5.15.01_202608011759.jpeg' }
+            ].map((coach, i) => (
+              <div key={i} className="rounded-xl md:rounded-2xl overflow-hidden relative group cursor-pointer h-96 md:h-[450px]">
+                <img src={coach.img} alt={coach.name} className="absolute inset-0 w-full h-full object-cover object-top grayscale transition-transform duration-700 group-hover:scale-110 group-hover:grayscale-0" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6">
+                  <h3 className="text-2xl font-bold text-white">{coach.name}</h3>
+                  <p className="text-sm text-white/70 font-semibold">{coach.spec}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Programs Section */}
       <section id="programs" ref={s3Reveal.containerRef} className="min-h-screen md:h-screen w-full overflow-hidden flex flex-col pt-1.5 md:pt-2 px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2">
         <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 gap-1.5 md:gap-2">
           
@@ -479,7 +507,7 @@ export default function LandingPage() {
             
             <div className="absolute bottom-3 left-3 right-3 md:bottom-5 md:left-5 md:right-5 flex gap-1.5 md:gap-2">
               
-              <div className="flex-1 bg-white rounded-xl md:rounded-2xl p-3 md:p-5 flex flex-col justify-between h-36 md:h-52 hover:-translate-y-2 transition-transform cursor-pointer">
+              <div onClick={() => setSelectedTopic('muscle')} className="flex-1 bg-white rounded-xl md:rounded-2xl p-3 md:p-5 flex flex-col justify-between h-36 md:h-52 hover:-translate-y-2 transition-transform cursor-pointer">
                 <h4 className="text-lg md:text-2xl font-bold text-black leading-5 md:leading-7">The Process<br/>of Building<br/>Muscle</h4>
                 <div className="self-end w-9 h-9 md:w-12 md:h-12 rounded-full border border-black flex items-center justify-center">
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="-rotate-45">
@@ -488,7 +516,7 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <div className="flex-1 bg-black/40 backdrop-blur-xl rounded-xl md:rounded-2xl p-3 md:p-5 flex flex-col justify-between h-36 md:h-52 hover:-translate-y-2 transition-transform cursor-pointer">
+              <div onClick={() => setSelectedTopic('nutrition')} className="flex-1 bg-black/40 backdrop-blur-xl rounded-xl md:rounded-2xl p-3 md:p-5 flex flex-col justify-between h-36 md:h-52 hover:-translate-y-2 transition-transform cursor-pointer">
                 <h4 className="text-lg md:text-2xl font-bold text-white leading-5 md:leading-7">Nutrition<br/>for Optimal<br/>Recovery</h4>
                 <div className="self-end w-9 h-9 md:w-12 md:h-12 rounded-full border border-white flex items-center justify-center text-white">
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="-rotate-45">
@@ -503,56 +531,119 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Plans Section */}
-      <section id="plans" className="w-full flex flex-col px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2 pt-10">
-        <div className="flex flex-col gap-1.5 md:gap-2 min-h-screen md:h-screen">
-          <div className="rounded-xl md:rounded-2xl bg-black p-5 md:p-10 flex flex-col justify-center items-center text-center flex-[0.3]">
-            <h2 className="text-[clamp(2.5rem,5vw,5rem)] font-bold text-white leading-tight">Membership Plans</h2>
-            <p className="text-white/70">Transform your life with our flexible pricing</p>
+      {/* AI Features Section */}
+      <section id="ai-features" className="w-full flex flex-col px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2 pt-10">
+        <div className="flex flex-col gap-1.5 md:gap-2">
+          <div className="rounded-xl md:rounded-2xl bg-black border border-stone-800 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_10px_30px_rgba(0,0,0,0.2)] p-5 md:p-10 flex flex-col justify-center items-center text-center">
+            <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-bold text-white leading-tight drop-shadow-md">Next-Gen AI Features</h2>
+            <p className="text-white/70 max-w-2xl mt-4 text-lg">Experience the future of fitness with our custom-built multimodal AI tools, designed to track, match, and predict your path to success.</p>
           </div>
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1.5 md:gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mt-2">
             {[
-              { months: '1 Month', price: '₹2,000', desc: 'Kickstart your fitness journey.' },
-              { months: '3 Months', price: '₹5,000', desc: 'Perfect for short-term goals.' },
-              { months: '6 Months', price: '₹8,000', desc: 'Best value for serious commitment.' },
-              { months: '12 Months', price: '₹13,000', desc: 'Ultimate transformation package.' }
-            ].map((plan, i) => (
-              <div key={i} className="rounded-xl md:rounded-2xl bg-stone-100 p-8 flex flex-col justify-between hover:bg-stone-200 transition-colors">
-                <div>
-                  <h3 className="text-2xl font-bold mb-2">{plan.months}</h3>
-                  <p className="text-sm font-semibold text-neutral-500 mb-8">{plan.desc}</p>
-                  <p className="text-5xl font-black">{plan.price}</p>
-                </div>
-                <button onClick={() => handleAuthClick('signup')} className="mt-8 w-full py-4 bg-black rounded-full text-white font-bold hover:bg-neutral-800 transition-colors">Select Plan</button>
+              {
+                title: 'Snap & Count AI Diet',
+                desc: 'Take a picture of your food. Gemini AI instantly estimates calories, protein, carbs, and fats directly to your log.',
+                icon: '📸'
+              },
+              {
+                title: 'AI Smart Programming',
+                desc: 'Hyper-personalized workout and diet generator based on your goals, injuries, and biometric feedback.',
+                icon: '🧠'
+              },
+              {
+                title: 'AI Gym Buddy Matcher',
+                desc: 'Find your perfect training partner. Our AI matches you based on goals and attendance times.',
+                icon: '🤝'
+              },
+              {
+                title: 'AI Form Check',
+                desc: 'Real-time biomechanics feedback using advanced computer vision to correct posture and prevent injuries.',
+                icon: '👁️'
+              },
+              {
+                title: 'AI Gym Receptionist',
+                desc: 'A 24/7 digital personal trainer that handles your class bookings, queries, and workout history instantly.',
+                icon: '🤖'
+              },
+              {
+                title: 'Gamified AI Achievements',
+                desc: 'Earn stunning, shareable badges for hitting milestones, calculated dynamically based on your progress logs.',
+                icon: '🏆'
+              },
+              {
+                title: 'Predictive Maintenance',
+                desc: 'Smart facility management predicting equipment faults before they happen based on member reports and usage.',
+                icon: '🔧'
+              },
+              {
+                title: 'AI Recovery Tracker',
+                desc: 'Connect your wearables. Our AI analyzes your sleep and strain to recommend optimal rest days and active recovery.',
+                icon: '⌚'
+              },
+              {
+                title: 'Smart Music Sync',
+                desc: 'The AI seamlessly syncs your workout tempo with curated playlists, dynamically changing BPM during intense sets.',
+                icon: '🎵'
+              }
+            ].map((feat, i) => (
+              <div key={i} className="relative rounded-xl md:rounded-2xl bg-[#0a0a0a] p-6 md:p-8 flex flex-col items-start border border-stone-800 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_10px_20px_rgba(0,0,0,0.5),0_20px_40px_rgba(0,0,0,0.5)] hover:-translate-y-2 hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_15px_30px_rgba(0,0,0,0.8),0_30px_60px_rgba(0,0,0,0.6)] transition-all duration-500 group overflow-hidden transform-gpu">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-all duration-500 pointer-events-none"></div>
+                <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-b from-stone-800 to-black border border-stone-700 flex items-center justify-center text-3xl mb-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_10px_20px_rgba(0,0,0,0.5)] group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-500 ease-out">{feat.icon}</div>
+                <h3 className="relative text-xl font-bold mb-3 text-white tracking-tight drop-shadow-md">{feat.title}</h3>
+                <p className="relative text-sm font-medium text-stone-400 leading-relaxed group-hover:text-stone-300 transition-colors duration-300">{feat.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Coaches Section */}
-      <section id="coaches" className="w-full flex flex-col px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2">
-        <div className="flex flex-col gap-1.5 md:gap-2 min-h-screen md:h-screen">
-          <div className="rounded-xl md:rounded-2xl bg-stone-100 p-5 md:p-10 flex justify-between items-end flex-[0.2]">
-            <h2 className="text-[clamp(2.5rem,5vw,5rem)] font-bold text-black leading-tight">Expert<br/>Coaches</h2>
+      {/* Plans Section */}
+      <section id="plans" className="w-full flex flex-col px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2 pt-10">
+        <div className="flex flex-col gap-1.5 md:gap-2">
+          <div className="rounded-xl md:rounded-2xl bg-black p-5 md:p-10 flex flex-col justify-center items-center text-center">
+            <h2 className="text-[clamp(2.5rem,5vw,5rem)] font-bold text-white leading-tight">Membership Plans</h2>
+            <p className="text-white/70">Transform your life with our flexible pricing & AI tools</p>
           </div>
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-1.5 md:gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1.5 md:gap-2">
             {[
-              { name: 'Sushant Agrawal', spec: 'Powerlifting Specialist', img: 'https://images.unsplash.com/photo-1567598508481-65985588ce2a?q=80&w=800&auto=format&fit=crop' },
-              { name: 'Nidhi Singh', spec: 'Functional Training', img: 'https://images.unsplash.com/photo-1548690312-e3b507d8c110?q=80&w=800&auto=format&fit=crop' },
-              { name: 'Bhavendra', spec: 'Bodybuilding Pro', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=800&auto=format&fit=crop' }
-            ].map((coach, i) => (
-              <div key={i} className="rounded-xl md:rounded-2xl overflow-hidden relative group cursor-pointer">
-                <img src={coach.img} alt={coach.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6">
-                  <h3 className="text-2xl font-bold text-white">{coach.name}</h3>
-                  <p className="text-sm text-white/70 font-semibold">{coach.spec}</p>
+              { months: '1 Month', price: '₹2,000', desc: 'Kickstart your fitness journey.', ai: false },
+              { months: '3 Months', price: '₹5,000', desc: 'Perfect for short-term goals.', ai: false },
+              { months: '6 Months', price: '₹8,000', desc: 'Best value for serious commitment.', ai: false },
+              { months: '12 Months', price: '₹13,000', desc: 'Ultimate transformation package.', ai: false },
+              { months: '3 Months Pro', price: '₹6,000', desc: 'Perfect for short-term goals.', ai: true, features: ['AI Gym Buddy Matcher', 'Basic AI Form Check'] },
+              { months: '6 Months Elite', price: '₹11,000', desc: 'Best value for serious commitment.', ai: true, features: ['Full AI Suite', 'Snap & Count Diet', 'Smart AI Programming'] },
+              { months: '9 Months Premium', price: '₹15,000', desc: 'Advanced tracking and coaching.', ai: true, features: ['Predictive Maintenance', 'AI Form Check Pro', 'Nutrition'] },
+              { months: '1 Year Ultimate', price: '₹20,000', desc: 'Ultimate transformation package.', ai: true, features: ['All AI Features + Priority', 'Gamified Badges', '1-on-1 PT'] }
+            ].map((plan, i) => (
+              <div key={i} className={`rounded-xl md:rounded-2xl p-8 flex flex-col justify-between transition-colors border ${plan.ai ? 'bg-black text-white border-stone-800 hover:bg-neutral-900' : 'bg-stone-50 border-stone-100 hover:bg-stone-100'}`}>
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-2xl font-bold">{plan.months}</h3>
+                    {plan.ai && <span className="bg-white text-black text-xs font-bold px-2 py-1 rounded-full">AI Powered</span>}
+                  </div>
+                  <p className={`text-sm font-semibold mb-6 ${plan.ai ? 'text-stone-400' : 'text-neutral-500'}`}>{plan.desc}</p>
+                  
+                  {plan.ai && plan.features && (
+                    <ul className="mb-6 space-y-2">
+                      {plan.features.map((feat, j) => (
+                        <li key={j} className="text-sm font-medium flex items-center gap-2 text-stone-300">
+                          <span className="text-white">✓</span> {feat}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  
+                  <p className="text-5xl font-black mb-4">{plan.price}</p>
                 </div>
+                <button onClick={() => handleAuthClick('signup')} className={`mt-4 w-full py-4 rounded-full font-bold transition-colors shadow-lg ${plan.ai ? 'bg-white text-black hover:bg-stone-200' : 'bg-black text-white hover:bg-neutral-800'}`}>Select Plan</button>
               </div>
             ))}
           </div>
         </div>
       </section>
+
+
 
       {/* Footer / Contact */}
       <footer id="contact" className="w-full px-3 md:px-5 pb-3">
@@ -604,6 +695,76 @@ export default function LandingPage() {
                 Submit Request
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {selectedTopic && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedTopic(null)} />
+          <div className="relative bg-white rounded-2xl w-full max-w-2xl p-6 md:p-10 shadow-2xl flex flex-col gap-6 transform transition-all">
+            <button 
+              onClick={() => setSelectedTopic(null)}
+              className="absolute top-4 right-4 md:top-6 md:right-6 p-2 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors"
+            >
+              <X size={20} className="text-black" />
+            </button>
+            
+            <div>
+              <h3 className="text-3xl md:text-4xl font-bold text-black leading-tight mb-3">
+                {selectedTopic === 'muscle' ? 'The Process of Building Muscle' : 'Nutrition for Optimal Recovery'}
+              </h3>
+              <p className="text-stone-600 text-lg md:text-xl font-medium">
+                {selectedTopic === 'muscle' 
+                  ? 'Hypertrophy is the science of breaking down muscle fibers and rebuilding them stronger. This requires progressive overload, optimal recovery, and consistency.'
+                  : 'What you eat determines how you rebuild. Proper macronutrient partitioning, hydration, and meal timing are crucial for muscle synthesis and CNS recovery.'}
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <h4 className="text-xl font-bold text-black flex items-center gap-2">
+                <span className="text-indigo-600">✨</span> AI Features to Boost Your Progress
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {selectedTopic === 'muscle' ? (
+                  <>
+                    <div className="bg-stone-50 rounded-xl p-5 border border-stone-100">
+                      <div className="text-2xl mb-2">👁️</div>
+                      <h5 className="font-bold text-black mb-1">AI Form Check Pro</h5>
+                      <p className="text-sm text-stone-600 font-medium">Analyzes your lifting mechanics in real-time to ensure maximum muscle fiber recruitment and injury prevention.</p>
+                    </div>
+                    <div className="bg-stone-50 rounded-xl p-5 border border-stone-100">
+                      <div className="text-2xl mb-2">🧠</div>
+                      <h5 className="font-bold text-black mb-1">Smart AI Programming</h5>
+                      <p className="text-sm text-stone-600 font-medium">Dynamically adjusts your volume and intensity based on your recovery metrics.</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="bg-stone-50 rounded-xl p-5 border border-stone-100">
+                      <div className="text-2xl mb-2">📸</div>
+                      <h5 className="font-bold text-black mb-1">Snap & Count AI Diet</h5>
+                      <p className="text-sm text-stone-600 font-medium">Instantly calculate macros and micros with computer vision, adjusting your daily targets based on workout intensity.</p>
+                    </div>
+                    <div className="bg-stone-50 rounded-xl p-5 border border-stone-100">
+                      <div className="text-2xl mb-2">⌚</div>
+                      <h5 className="font-bold text-black mb-1">AI Recovery Tracker</h5>
+                      <p className="text-sm text-stone-600 font-medium">Synthesizes sleep data and workout strain to prescribe exact nutrient timing for your next meal.</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+            
+            <button 
+              onClick={() => {
+                setSelectedTopic(null);
+                handleAuthClick('signup');
+              }}
+              className="w-full mt-2 py-4 bg-black text-white font-bold rounded-xl hover:bg-neutral-800 transition-colors text-lg shadow-lg"
+            >
+              Start Your AI Plan
+            </button>
           </div>
         </div>
       )}

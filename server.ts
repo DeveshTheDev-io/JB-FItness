@@ -1,10 +1,14 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
+import { createClient } from '@supabase/supabase-js';
 import dotenv from "dotenv";
 
 dotenv.config();
+
+const supabase = createClient(process.env.VITE_SUPABASE_URL || '', process.env.VITE_SUPABASE_ANON_KEY || '');
+
 
 async function startServer() {
   const app = express();
@@ -22,7 +26,6 @@ async function startServer() {
     }
   });
 
-  // API Route for generating AI workout tips for member
   app.post("/api/ai/workout-advice", async (req, res) => {
     try {
       const { goal, experience } = req.body;
@@ -37,7 +40,6 @@ async function startServer() {
     }
   });
 
-  // API Route for Admin AI insights
   app.post("/api/ai/admin-insights", async (req, res) => {
     try {
       const { membersData, type } = req.body;
@@ -58,7 +60,6 @@ async function startServer() {
     }
   });
 
-  // API Route for Smart Workout & Diet Planner
   app.post("/api/ai/planner", async (req, res) => {
     try {
       const { goal, weight, diet } = req.body;
@@ -74,7 +75,6 @@ async function startServer() {
     }
   });
 
-  // API Route for AI Form Checker
   app.post("/api/ai/form-check", async (req, res) => {
     try {
       const { fileData, mimeType, exercise } = req.body;
@@ -84,7 +84,7 @@ async function startServer() {
         contents: [
           {
             inlineData: {
-              data: fileData, // base64 string
+              data: fileData,
               mimeType: mimeType,
             }
           },
@@ -98,32 +98,84 @@ async function startServer() {
     }
   });
 
-  // API Route for Gym Receptionist Chatbot
   app.post("/api/ai/chat", async (req, res) => {
     try {
-      const { message, history } = req.body;
+      const { message, history, memberId } = req.body;
       
       const formattedHistory = history.map((msg: any) => ({
         role: msg.role,
         parts: [{ text: msg.text }]
       }));
       
+      // We use systemInstruction for the persona
       const chat = ai.chats.create({
         model: "gemini-3.6-flash",
-        history: [
-          {
-            role: "user",
-            parts: [{ text: "System prompt: You are a friendly, 24/7 AI gym receptionist and personal coach for JB Fitness. You can answer questions about gym rules, class schedules (Yoga at 6 PM Tue/Thu, HIIT at 7 AM Mon/Wed), and general fitness advice. Be concise and helpful." }]
-          },
-          {
-            role: "model",
-            parts: [{ text: "Got it! I am ready to help JB Fitness members as their AI receptionist and coach." }]
-          },
-          ...formattedHistory
-        ]
+        config: {
+          systemInstruction: "You are a friendly, 24/7 AI gym receptionist and personal coach for JB Fitness. You can answer questions about gym rules, class schedules (Yoga at 6 PM Tue/Thu, HIIT at 7 AM Mon/Wed), and general fitness advice. You have tools to check the user's workout history and book classes for them. Be concise and helpful. When booking a class, confirm the booking with them.",
+          tools: [{
+            functionDeclarations: [
+              {
+                name: "get_workout_history",
+                description: "Retrieves the user's workout history (e.g., max bench press, recent logs).",
+                parameters: {
+                  type: Type.OBJECT,
+                  properties: {},
+                }
+              },
+              {
+                name: "book_class",
+                description: "Books a gym class for the user.",
+                parameters: {
+                  type: Type.OBJECT,
+                  properties: {
+                    class_name: { type: Type.STRING, description: "The name of the class to book (e.g., 'Yoga', 'HIIT')." },
+                    booking_time: { type: Type.STRING, description: "The time of the class in ISO format." }
+                  },
+                  required: ["class_name", "booking_time"]
+                }
+              }
+            ]
+          }]
+        },
+        history: formattedHistory
       });
       
-      const response = await chat.sendMessage({ message });
+      let response = await chat.sendMessage({ message });
+      
+      if (response.functionCalls && response.functionCalls.length > 0) {
+        const calls = response.functionCalls;
+        const functionResponses = [];
+        
+        for (const call of calls) {
+          if (call.name === "get_workout_history") {
+            if (memberId) {
+              const { data, error } = await supabase.from('workout_logs').select('*').eq('member_id', memberId).order('completed_at', { ascending: false }).limit(10);
+              if (error) {
+                functionResponses.push({ name: call.name, response: { error: "Failed to fetch logs" } });
+              } else {
+                functionResponses.push({ name: call.name, response: { logs: data } });
+              }
+            } else {
+               functionResponses.push({ name: call.name, response: { error: "User not logged in or memberId not provided." } });
+            }
+          } else if (call.name === "book_class") {
+            if (memberId) {
+              const { class_name, booking_time } = call.args;
+              const { error } = await supabase.from('class_bookings').insert({ member_id: memberId, class_name, booking_time });
+              if (error) {
+                functionResponses.push({ name: call.name, response: { success: false, error: error.message } });
+              } else {
+                functionResponses.push({ name: call.name, response: { success: true, message: `Successfully booked ${class_name} at ${booking_time}` } });
+              }
+            } else {
+               functionResponses.push({ name: call.name, response: { success: false, error: "User not logged in." } });
+            }
+          }
+        }
+        
+        response = await chat.sendMessage({ message: functionResponses as any });
+      }
+      
       res.json({ text: response.text });
     } catch (error: any) {
       console.error(error);
@@ -131,7 +183,44 @@ async function startServer() {
     }
   });
 
-  // Vite middleware for development
+  app.post("/api/ai/diet-tracker", async (req, res) => {
+    try {
+      const { fileData, mimeType } = req.body;
+      const response = await ai.models.generateContent({
+        model: "gemini-3.6-flash",
+        contents: [
+          {
+            inlineData: {
+              data: fileData,
+              mimeType: mimeType,
+            }
+          },
+          `Analyze this food image. Estimate the calories, protein (g), carbs (g), and fats (g). Respond in valid JSON format with this structure: { "foodName": "...", "calories": 0, "protein": 0, "carbs": 0, "fats": 0 }`
+        ],
+        config: { responseMimeType: "application/json" }
+      });
+      res.json(JSON.parse(response.text));
+    } catch (error: any) {
+      console.error(error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/ai/predictive-maintenance", async (req, res) => {
+    try {
+      const { reports } = req.body;
+      const response = await ai.models.generateContent({
+        model: "gemini-3.6-flash",
+        contents: `Analyze these gym equipment fault reports: ${JSON.stringify(reports)}. Predict which high-use machines need maintenance. Respond in valid JSON format with this structure: { "predictions": [{ "machine": "...", "urgency": "High|Medium|Low", "reason": "..." }] }`,
+        config: { responseMimeType: "application/json" }
+      });
+      res.json(JSON.parse(response.text));
+    } catch (error: any) {
+      console.error(error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
