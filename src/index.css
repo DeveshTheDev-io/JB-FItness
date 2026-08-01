@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-neu-base: #e0e5ec;
+  --color-neu-dark: #a3b1c6;
+  --color-neu-light: #ffffff;
+  --color-brand-primary: #5a67d8;
+  --color-brand-secondary: #334155;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+@layer utilities {
+  .neu-flat {
+    background-color: var(--color-neu-base);
+    box-shadow: 9px 9px 16px var(--color-neu-dark), -9px -9px 16px var(--color-neu-light);
+  }
+  .neu-pressed {
+    background-color: var(--color-neu-base);
+    box-shadow: inset 6px 6px 12px var(--color-neu-dark), inset -6px -6px 12px var(--color-neu-light);
+  }
+  .neu-convex {
+    background: linear-gradient(145deg, #f0f5fc, #cacfd4);
+    box-shadow: 9px 9px 16px var(--color-neu-dark), -9px -9px 16px var(--color-neu-light);
+  }
+  .neu-concave {
+    background: linear-gradient(145deg, #cacfd4, #f0f5fc);
+    box-shadow: 9px 9px 16px var(--color-neu-dark), -9px -9px 16px var(--color-neu-light);
+  }
+  .neu-btn {
+    background-color: var(--color-neu-base);
+    box-shadow: 9px 9px 16px var(--color-neu-dark), -9px -9px 16px var(--color-neu-light);
+    @apply transition-all duration-200 ease-in-out font-semibold rounded-xl text-brand-secondary cursor-pointer;
+  }
+  .neu-btn:active {
+    background-color: var(--color-neu-base);
+    box-shadow: inset 4px 4px 8px var(--color-neu-dark), inset -4px -4px 8px var(--color-neu-light);
+  }
+  .neu-btn-primary {
+    background-color: var(--color-brand-primary);
+    box-shadow: 6px 6px 12px var(--color-neu-dark), -6px -6px 12px var(--color-neu-light);
+    @apply transition-all duration-200 ease-in-out font-bold rounded-xl text-white cursor-pointer;
+  }
+  .neu-btn-primary:active {
+    box-shadow: inset 4px 4px 8px rgba(0,0,0,0.2), inset -4px -4px 8px rgba(255,255,255,0.2);
+  }
+}
+
+body {
+  background-color: var(--color-neu-base);
+  color: var(--color-brand-secondary);
+  font-family: 'Open Sauce One', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+html, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}

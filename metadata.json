@@ -1,0 +1,8 @@
+{
+  "name": "JB Fitness",
+  "description": "Jai Bajrangi Fitness - Modern Gym Management Web App with Neumorphic UI",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
