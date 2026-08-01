@@ -83,8 +83,8 @@ export default function AdminLogin() {
           <div className="neu-convex p-4 rounded-3xl mb-4">
             <Dumbbell className="text-[var(--color-brand-primary)] w-10 h-10" />
           </div>
-          <h1 className="text-3xl font-black tracking-tighter text-[var(--color-brand-secondary)]">
-            JB <span className="text-[var(--color-brand-primary)]">Fitness</span>
+          <h1 className="text-3xl font-black tracking-tighter text-[var(--color-brand-secondary)] text-center">
+            JAI BALAJI <span className="text-[var(--color-brand-primary)]">ELITE FITNESS</span>
           </h1>
           <p className="opacity-70 mt-2 font-medium">{mode === 'signin' ? 'Secure Portal Access' : 'Create an Account'}</p>
         </div>

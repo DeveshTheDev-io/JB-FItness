@@ -191,7 +191,7 @@ function Navbar() {
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 md:px-6 py-2 md:py-3 bg-white/80 backdrop-blur-md">
         <div className="flex flex-col cursor-pointer" onClick={() => handleScroll('home')}>
           <span className="text-xl md:text-2xl font-extrabold uppercase tracking-tight leading-none">JAI</span>
-          <span className="text-xl md:text-2xl font-extrabold uppercase tracking-tight leading-none -mt-1.5 md:-mt-2">BAJRANGI</span>
+          <span className="text-xl md:text-2xl font-extrabold uppercase tracking-tight leading-none -mt-1.5 md:-mt-2">BALAJI</span>
           <span className="text-[8px] md:text-[9px] font-medium leading-none mt-1.5 md:mt-2 uppercase">Elite Fitness</span>
         </div>
         
@@ -281,6 +281,44 @@ export default function LandingPage() {
       else navigate('/member');
     } else {
       navigate(`/login?mode=${mode}`);
+    }
+  };
+
+  const handleBuyPlan = async (plan: any) => {
+    if (!user) {
+      navigate('/login?mode=signup');
+      return;
+    }
+    if (user.role === 'admin') {
+      alert("Admins cannot buy plans.");
+      return;
+    }
+
+    try {
+      const stored = localStorage.getItem('currentUser');
+      const currentUser = stored ? JSON.parse(stored) : null;
+      if (!currentUser?.email) {
+        alert("User email not found. Please log in again.");
+        return;
+      }
+
+      const { error } = await supabase.from('plan_requests').insert({
+        user_email: currentUser.email,
+        plan_name: plan.months, // We're using 'months' as the plan name like '3 Months Pro'
+        months: plan.months,
+        price: plan.price,
+        status: 'pending'
+      });
+
+      if (error) {
+        console.error(error);
+        alert("Error requesting plan.");
+      } else {
+        alert("Plan requested successfully! Admin will confirm your payment soon.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error requesting plan.");
     }
   };
 
@@ -636,7 +674,7 @@ export default function LandingPage() {
                   
                   <p className="text-5xl font-black mb-4">{plan.price}</p>
                 </div>
-                <button onClick={() => handleAuthClick('signup')} className={`mt-4 w-full py-4 rounded-full font-bold transition-colors shadow-lg ${plan.ai ? 'bg-white text-black hover:bg-stone-200' : 'bg-black text-white hover:bg-neutral-800'}`}>Select Plan</button>
+                <button onClick={() => handleBuyPlan(plan)} className={`mt-4 w-full py-4 rounded-full font-bold transition-colors shadow-lg ${plan.ai ? 'bg-white text-black hover:bg-stone-200' : 'bg-black text-white hover:bg-neutral-800'}`}>Select Plan</button>
               </div>
             ))}
           </div>
@@ -649,8 +687,9 @@ export default function LandingPage() {
       <footer id="contact" className="w-full px-3 md:px-5 pb-3">
         <div className="rounded-xl md:rounded-2xl bg-black p-8 md:p-16 flex flex-col md:flex-row justify-between text-white gap-10">
           <div>
-            <h2 className="text-3xl font-black mb-4">JAI BAJRANGI FITNESS</h2>
-            <p className="text-sm font-semibold opacity-70 max-w-xs">Elevating fitness standards with elite equipment and professional coaching.</p>
+            <h2 className="text-3xl font-black mb-4">JAI BALAJI ELITE FITNESS</h2>
+            <p className="text-sm font-semibold opacity-70 max-w-xs mb-4">Elevating fitness standards with elite equipment and professional coaching.</p>
+            <p className="text-sm font-bold text-neutral-400">Powered by Devscomic A.I</p>
           </div>
           <div className="flex flex-col gap-2">
             <h3 className="font-bold mb-2">Contact</h3>

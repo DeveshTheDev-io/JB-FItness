@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Activity, Calendar, Clock, CreditCard, Play, Plus, History, Users, Dumbbell, Wind, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Activity, Calendar, Clock, CreditCard, Play, Plus, History, Users, Dumbbell, Wind, AlertCircle, ArrowLeft, ClipboardList, Bell } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
@@ -33,6 +33,54 @@ export default function MemberDashboard() {
   
   // Buddy Matcher State
   const [buddies, setBuddies] = useState<any[]>([]);
+
+  // User Plans & Attendance State
+  const [myPlans, setMyPlans] = useState<any[]>([]);
+  const [myAttendance, setMyAttendance] = useState<any[]>([]);
+  const [myMessages, setMyMessages] = useState<any[]>([]);
+  const [memberInfo, setMemberInfo] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const currentUserStr = localStorage.getItem('currentUser');
+      if (!currentUserStr || !supabase) return;
+      const user = JSON.parse(currentUserStr);
+
+      const { data: plans } = await supabase
+        .from('user_plans')
+        .select('*')
+        .eq('user_email', user.email)
+        .order('start_date', { ascending: false });
+      
+      if (plans) setMyPlans(plans);
+
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('user_email', user.email)
+        .order('created_at', { ascending: false });
+        
+      if (messages) setMyMessages(messages);
+
+      const { data: member } = await supabase
+        .from('members')
+        .select('id, status, plan')
+        .eq('email', user.email)
+        .single();
+        
+      if (member) {
+        setMemberInfo(member);
+        const { data: attendance } = await supabase
+          .from('attendance')
+          .select('*')
+          .eq('member_id', member.id)
+          .order('check_in_time', { ascending: false });
+        
+        if (attendance) setMyAttendance(attendance);
+      }
+    };
+    fetchUserData();
+  }, []);
 
   const checkFood = async () => {
     if (!foodImage || !foodPreview) return;
@@ -182,7 +230,7 @@ export default function MemberDashboard() {
             <Activity className="text-[var(--color-brand-primary)]" />
           </div>
           <div>
-            <h2 className="font-bold text-xl">JB Fitness</h2>
+            <h2 className="font-bold text-xl">JAI BALAJI ELITE FITNESS</h2>
             <p className="text-sm opacity-70">Member Portal</p>
           </div>
         </div>
@@ -190,6 +238,8 @@ export default function MemberDashboard() {
         <nav className="flex md:flex-col gap-4 overflow-x-auto pb-4 md:pb-0">
           {[
             { id: 'workout', icon: Play, label: 'Workout Tracker' },
+            { id: 'messages', icon: Bell, label: `Messages ${myMessages.filter(m => !m.is_read).length > 0 ? `(${myMessages.filter(m => !m.is_read).length})` : ''}` },
+            { id: 'myplans', icon: ClipboardList, label: 'My Plans & Attendance' },
             { id: 'aicoach', icon: Wind, label: 'Smart Planner' },
             { id: 'diettracker', icon: Activity, label: 'Diet Tracker' },
             { id: 'formchecker', icon: Activity, label: 'Form Checker' },
@@ -204,12 +254,19 @@ export default function MemberDashboard() {
               key={tab.id}
               variant={activeTab === tab.id ? 'primary' : 'default'}
               className={`justify-start gap-4 flex-shrink-0 ${tab.id === 'logout' ? 'text-red-600' : ''}`}
-              onClick={() => {
+              onClick={async () => {
                 if (tab.id === 'logout') {
                   localStorage.removeItem('currentUser');
                   navigate('/');
                 } else {
                   setActiveTab(tab.id);
+                  if (tab.id === 'messages' && myMessages.some(m => !m.is_read)) {
+                    const unreadIds = myMessages.filter(m => !m.is_read).map(m => m.id);
+                    if (supabase && unreadIds.length > 0) {
+                      await supabase.from('messages').update({ is_read: true }).in('id', unreadIds);
+                      setMyMessages(myMessages.map(m => ({ ...m, is_read: true })));
+                    }
+                  }
                 }
               }}
             >
@@ -221,10 +278,12 @@ export default function MemberDashboard() {
 
         {/* Mini Subscription Status */}
         <Card variant="pressed" className="mt-auto hidden md:block">
-          <h4 className="text-sm font-bold mb-2">Active Plan</h4>
-          <p className="text-2xl font-black text-[var(--color-brand-primary)]">Pro</p>
-          <p className="text-xs opacity-70 mt-1">Renews in 5 days</p>
-          <Button variant="primary" className="w-full mt-4 py-2 text-sm">Renew Now</Button>
+          <h4 className="text-sm font-bold mb-2">Membership Status</h4>
+          <p className="text-2xl font-black text-[var(--color-brand-primary)]">{memberInfo?.plan || 'None'}</p>
+          <p className={`text-sm mt-1 font-bold ${memberInfo?.status === 'Active' ? 'text-green-500' : memberInfo?.status === 'Paused' ? 'text-yellow-500' : 'text-red-500'}`}>
+            {memberInfo?.status || 'Inactive'}
+          </p>
+          <Button variant="primary" className="w-full mt-4 py-2 text-sm" onClick={() => setActiveTab('subscription')}>View Plans</Button>
           <Button variant="default" className="w-full mt-2 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => {
             localStorage.removeItem('currentUser');
             navigate('/');
@@ -241,6 +300,93 @@ export default function MemberDashboard() {
           transition={{ duration: 0.3 }}
           className="max-w-4xl mx-auto space-y-8"
         >
+          {activeTab === 'messages' && (
+            <>
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-3xl font-black tracking-tight">Messages & Notifications</h2>
+              </div>
+              <div className="space-y-4">
+                {myMessages.length === 0 ? (
+                  <Card className="text-center py-12">
+                    <p className="text-neutral-500 font-bold">No messages right now.</p>
+                  </Card>
+                ) : (
+                  myMessages.map(msg => (
+                    <Card key={msg.id} variant="pressed" className={!msg.is_read ? 'border border-[var(--color-brand-primary)]' : ''}>
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-bold text-lg">{msg.title}</h3>
+                        <span className="text-xs opacity-70">{new Date(msg.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <p className="opacity-80">{msg.message}</p>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+
+          {activeTab === 'myplans' && (
+            <>
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-3xl font-black tracking-tight">My Plans & Attendance</h2>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-6">
+                <Card>
+                  <h3 className="text-xl font-bold mb-4">Purchased Plans</h3>
+                  <div className="space-y-4">
+                    {myPlans.length === 0 ? (
+                      <p className="opacity-70">No plans purchased yet.</p>
+                    ) : (
+                      myPlans.map((plan) => {
+                        const start = new Date(plan.start_date);
+                        const end = new Date(plan.end_date);
+                        // Count attendance within this plan's period
+                        const daysAttended = myAttendance.filter(a => {
+                          const attDate = new Date(a.check_in_time);
+                          return attDate >= start && attDate <= end;
+                        }).length;
+
+                        return (
+                          <Card key={plan.id} variant="pressed" className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                            <div>
+                              <p className="font-bold text-lg">{plan.plan_name}</p>
+                              <p className="text-sm opacity-70">Duration: {plan.months}</p>
+                              <p className="text-sm opacity-70">{start.toLocaleDateString()} to {end.toLocaleDateString()}</p>
+                            </div>
+                            <div className="text-left md:text-right">
+                              <p className="font-black text-2xl text-[var(--color-brand-primary)]">{daysAttended}</p>
+                              <p className="text-sm opacity-70 font-bold uppercase tracking-wider">Days Attended</p>
+                              <p className={`text-sm mt-1 font-bold ${plan.active ? 'text-green-500' : 'text-red-500'}`}>
+                                {plan.active ? 'ACTIVE' : 'EXPIRED'}
+                              </p>
+                            </div>
+                          </Card>
+                        )
+                      })
+                    )}
+                  </div>
+                </Card>
+
+                <Card>
+                  <h3 className="text-xl font-bold mb-4">Recent Attendance</h3>
+                  <div className="space-y-2">
+                    {myAttendance.length === 0 ? (
+                      <p className="opacity-70">No attendance records found.</p>
+                    ) : (
+                      myAttendance.slice(0, 10).map((att) => (
+                        <div key={att.id} className="flex justify-between items-center py-2 border-b border-[var(--color-neu-dark)]/10 last:border-0">
+                          <p className="font-bold">{new Date(att.check_in_time).toLocaleDateString()}</p>
+                          <p className="opacity-70 text-sm">{new Date(att.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </Card>
+              </div>
+            </>
+          )}
+
           {activeTab === 'workout' && (
             <>
               <div className="flex justify-between items-center">
@@ -469,7 +615,7 @@ export default function MemberDashboard() {
                     <Users className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg">JB Fitness Assistant</h3>
+                    <h3 className="font-bold text-lg">JAI BALAJI ELITE FITNESS Assistant</h3>
                     <p className="text-sm opacity-80">Ask about rules, classes, or tips</p>
                   </div>
                 </div>

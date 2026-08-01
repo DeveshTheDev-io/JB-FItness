@@ -12,6 +12,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [trialRequests, setTrialRequests] = useState<any[]>([]);
+  const [planRequests, setPlanRequests] = useState<any[]>([]);
   const [aiInsights, setAiInsights] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [members, setMembers] = useState<any[]>([]);
@@ -20,6 +21,9 @@ export default function AdminDashboard() {
   const [editingMember, setEditingMember] = useState<any>(null);
   const [memberForm, setMemberForm] = useState({ name: '', plan: 'Basic', status: 'Active' });
   const [searchMember, setSearchMember] = useState('');
+  const [isPushModalOpen, setIsPushModalOpen] = useState(false);
+  const [pushTitle, setPushTitle] = useState('');
+  const [pushMessage, setPushMessage] = useState('');
 
   const peakHourData = useMemo(() => {
     const hours = {
@@ -140,6 +144,18 @@ export default function AdminDashboard() {
       }
     };
 
+    const fetchPlanRequests = async () => {
+      if (!supabase) return;
+      const { data, error } = await supabase
+        .from('plan_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (!error && data) {
+        setPlanRequests(data);
+      }
+    };
+
     const fetchMembers = async () => {
       if (!supabase) return;
       const { data, error } = await supabase
@@ -164,6 +180,7 @@ export default function AdminDashboard() {
     };
     
     fetchRequests();
+    fetchPlanRequests();
     fetchMembers();
     fetchAttendance();
   }, []);
@@ -178,6 +195,83 @@ export default function AdminDashboard() {
     if (!error) {
       setTrialRequests(trialRequests.map(req => req.id === id ? { ...req, status } : req));
     }
+  };
+
+  const updatePlanRequestStatus = async (request: any, status: string) => {
+    if (!supabase) return;
+
+    if (status === 'approved') {
+      const startDate = new Date();
+      let monthsToAdd = 1;
+      
+      if (request.months.includes('3')) monthsToAdd = 3;
+      else if (request.months.includes('6')) monthsToAdd = 6;
+      else if (request.months.includes('9')) monthsToAdd = 9;
+      else if (request.months.includes('12') || request.months.includes('1 Year')) monthsToAdd = 12;
+
+      const endDate = new Date(startDate);
+      endDate.setMonth(endDate.getMonth() + monthsToAdd);
+
+      const { error: insertError } = await supabase.from('user_plans').insert({
+        user_email: request.user_email,
+        plan_name: request.plan_name,
+        months: request.months,
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0],
+        active: true
+      });
+
+      if (insertError) {
+        console.error("Error creating user plan:", insertError);
+        alert("Failed to confirm plan. Check console.");
+        return;
+      }
+      
+      // Update member status and plan
+      await supabase.from('members').update({
+        status: 'Active',
+        plan: request.plan_name
+      }).eq('email', request.user_email);
+    }
+
+    const { error } = await supabase
+      .from('plan_requests')
+      .update({ status })
+      .eq('id', request.id);
+
+    if (!error) {
+      setPlanRequests(planRequests.map(req => req.id === request.id ? { ...req, status } : req));
+    }
+  };
+
+  const handleSendPush = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!supabase || !pushTitle || !pushMessage) return;
+
+    // In a real scenario, this might send a general broadcast or to specific members.
+    // For now, we will add it to the messages table for all active members.
+    // However, to keep it simple, if no specific user is selected, send to all members.
+    const emailsToNotify = members.map(m => m.email).filter(Boolean);
+    
+    const inserts = emailsToNotify.map(email => ({
+      user_email: email,
+      title: pushTitle,
+      message: pushMessage
+    }));
+
+    if (inserts.length > 0) {
+      const { error } = await supabase.from('messages').insert(inserts);
+      if (error) {
+        console.error("Error sending push:", error);
+        alert("Failed to send push notification.");
+        return;
+      }
+    }
+    
+    setIsPushModalOpen(false);
+    setPushTitle('');
+    setPushMessage('');
+    alert("Push notification sent to all members successfully!");
   };
 
   const handleMemberSave = async (e: React.FormEvent) => {
@@ -248,7 +342,7 @@ export default function AdminDashboard() {
             <Activity className="text-[var(--color-brand-primary)]" />
           </div>
           <div>
-            <h2 className="font-bold text-xl">JB Fitness</h2>
+            <h2 className="font-bold text-xl">JAI BALAJI ELITE FITNESS</h2>
             <p className="text-sm opacity-70">Admin Console</p>
           </div>
         </div>
@@ -491,6 +585,7 @@ export default function AdminDashboard() {
                         <select className="w-full h-[52px] px-6 rounded-2xl neu-inset bg-[var(--color-neu-base)] focus:outline-none" value={memberForm.status} onChange={e => setMemberForm({...memberForm, status: e.target.value})}>
                           <option>Active</option>
                           <option>Expired</option>
+                          <option>Paused</option>
                         </select>
                       </div>
                       <Button variant="primary" className="w-full mt-4 py-4" type="submit">Save</Button>
@@ -501,51 +596,67 @@ export default function AdminDashboard() {
             </>
           )}
 
-          {activeTab === 'dues' && (
+          {activeTab === 'dues' && (() => {
+            const pendingRequests = planRequests.filter(req => req.status === 'pending');
+            const pendingAmount = pendingRequests.reduce((sum, req) => {
+              const priceNum = parseInt(req.price.replace(/[^0-9]/g, '')) || 0;
+              return sum + priceNum;
+            }, 0);
+            const pendingCount = pendingRequests.length;
+
+            return (
             <>
               <h2 className="text-3xl font-black tracking-tight mb-8">Dues & Payments</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <Card className="flex flex-col items-center justify-center py-8 text-center">
                   <div className="text-sm font-bold opacity-70 mb-2 uppercase tracking-widest">Pending Dues</div>
-                  <div className="text-4xl font-black text-[var(--color-brand-primary)]">₹32,500</div>
-                  <div className="text-sm opacity-70 mt-2">Across 24 members</div>
+                  <div className="text-4xl font-black text-[var(--color-brand-primary)]">₹{pendingAmount.toLocaleString('en-IN')}</div>
+                  <div className="text-sm opacity-70 mt-2">Across {pendingCount} member{pendingCount !== 1 ? 's' : ''}</div>
                 </Card>
                 <Card className="md:col-span-2 flex flex-col justify-center px-8">
                   <h3 className="text-xl font-bold mb-4">Automated Reminders</h3>
                   <p className="opacity-70 mb-6">System currently sends automated SMS and Push Notifications 3 days before expiry, and on the day of expiry.</p>
                   <div className="flex gap-4">
-                    <Button variant="primary">Send Manual Push Now</Button>
+                    <Button variant="primary" onClick={() => setIsPushModalOpen(true)}>Send Manual Push Now</Button>
                     <Button>Configure Reminders</Button>
                   </div>
                 </Card>
               </div>
 
-              <h3 className="text-xl font-bold mb-4">Recent Transactions</h3>
+              <h3 className="text-xl font-bold mb-4">Plan Purchase Requests</h3>
               <div className="space-y-4">
-                {[
-                  { name: 'Vikas Patel', type: 'Pro Renewal', amount: '₹2,499', date: 'Today, 9:00 AM', status: 'Success' },
-                  { name: 'Anjali Desai', type: 'Elite Plan', amount: '₹4,999', date: 'Yesterday', status: 'Success' },
-                  { name: 'Karan Singh', type: 'Basic Plan', amount: '₹1,499', date: 'Jul 21, 2026', status: 'Failed' },
-                ].map((tx, i) => (
-                  <Card key={i} variant="pressed" className="flex justify-between items-center">
-                    <div className="flex gap-4 items-center">
-                      <div className="neu-convex p-3 rounded-xl hidden sm:block">
-                        <IndianRupee className="w-5 h-5 text-[var(--color-brand-secondary)]" />
+                {planRequests.length === 0 ? (
+                  <p className="opacity-70">No plan requests found.</p>
+                ) : (
+                  planRequests.map((req) => (
+                    <Card key={req.id} variant="pressed" className="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-4">
+                      <div className="flex gap-4 items-center">
+                        <div className="neu-convex p-3 rounded-xl hidden sm:block">
+                          <IndianRupee className="w-5 h-5 text-[var(--color-brand-secondary)]" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-lg">{req.user_email}</p>
+                          <p className="text-sm opacity-70">{req.plan_name} • {req.price}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-lg">{tx.name}</p>
-                        <p className="text-sm opacity-70">{tx.type} • {tx.date}</p>
+                      <div className="text-right flex flex-col md:items-end gap-2">
+                        <p className={`text-sm font-bold uppercase tracking-wider ${req.status === 'approved' ? 'text-green-500' : req.status === 'rejected' ? 'text-red-500' : 'text-yellow-600'}`}>
+                          {req.status}
+                        </p>
+                        {req.status === 'pending' && (
+                          <div className="flex gap-2">
+                            <Button className="px-3 py-1 bg-green-500 text-white border-green-500 text-sm hover:bg-green-600" onClick={() => updatePlanRequestStatus(req, 'approved')}>Confirm</Button>
+                            <Button className="px-3 py-1 bg-red-500 text-white border-red-500 text-sm hover:bg-red-600" onClick={() => updatePlanRequestStatus(req, 'rejected')}>Reject</Button>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-black text-xl">{tx.amount}</p>
-                      <p className={`text-sm font-bold ${tx.status === 'Success' ? 'text-green-500' : 'text-[var(--color-brand-primary)]'}`}>{tx.status}</p>
-                    </div>
-                  </Card>
-                ))}
+                    </Card>
+                  ))
+                )}
               </div>
             </>
-          )}
+            );
+          })()}
 
           {activeTab === 'maintenance' && (
             <div className="space-y-6">
@@ -626,6 +737,41 @@ export default function AdminDashboard() {
 
         </motion.div>
       </main>
+
+      {/* Push Notification Modal */}
+      {isPushModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md">
+            <h3 className="text-2xl font-black mb-6">Send Push Notification</h3>
+            <form onSubmit={handleSendPush} className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold opacity-70 mb-2">Title</label>
+                <Input
+                  value={pushTitle}
+                  onChange={(e) => setPushTitle(e.target.value)}
+                  placeholder="e.g. Action Required: Plan Expiring"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold opacity-70 mb-2">Message</label>
+                <textarea
+                  className="w-full px-4 py-3 bg-[var(--color-neu-bg)] border border-[var(--color-neu-border)] rounded-xl focus:outline-none focus:border-[var(--color-brand-primary)]"
+                  rows={4}
+                  value={pushMessage}
+                  onChange={(e) => setPushMessage(e.target.value)}
+                  placeholder="Type your notification message here..."
+                  required
+                />
+              </div>
+              <div className="flex gap-4 pt-4">
+                <Button variant="default" className="flex-1" type="button" onClick={() => setIsPushModalOpen(false)}>Cancel</Button>
+                <Button variant="primary" className="flex-1" type="submit">Send Now</Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
