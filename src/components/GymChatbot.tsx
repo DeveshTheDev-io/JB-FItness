@@ -53,7 +53,7 @@ export default function GymChatbot() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[100] flex flex-col items-end">
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -61,9 +61,9 @@ export default function GymChatbot() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="mb-4"
+            className="mb-4 origin-bottom-right"
           >
-            <Card className="flex flex-col w-[350px] sm:w-[400px] h-[500px] p-0 overflow-hidden shadow-2xl border border-neutral-200">
+            <Card className="flex flex-col w-[calc(100vw-32px)] sm:w-[400px] h-[calc(100dvh-120px)] max-h-[600px] sm:h-[500px] p-0 overflow-hidden shadow-2xl border border-neutral-200">
               <div className="bg-[var(--color-brand-secondary)] p-4 text-white flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center shrink-0">

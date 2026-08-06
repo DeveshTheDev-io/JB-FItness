@@ -57,17 +57,22 @@ function useStaggeredReveal(count: number, threshold = 0.15) {
 }
 
 function useImageDimensions(src: string, sectionWidth: number, sectionHeight: number) {
-  const [dims, setDims] = useState({ width: 0, height: 0 });
+  const [naturalDims, setNaturalDims] = useState({ width: 0, height: 0 });
+
   useEffect(() => {
-    if (!sectionWidth || !sectionHeight) return;
     const img = new Image();
     img.src = src;
     img.onload = () => {
-      const scale = Math.max(sectionWidth / img.naturalWidth, sectionHeight / img.naturalHeight);
-      setDims({ width: img.naturalWidth * scale, height: img.naturalHeight * scale });
+      setNaturalDims({ width: img.naturalWidth, height: img.naturalHeight });
     };
-  }, [src, sectionWidth, sectionHeight]);
-  return dims;
+  }, [src]);
+
+  if (!sectionWidth || !sectionHeight || !naturalDims.width || !naturalDims.height) {
+    return { width: 0, height: 0 };
+  }
+
+  const scale = Math.max(sectionWidth / naturalDims.width, sectionHeight / naturalDims.height);
+  return { width: naturalDims.width * scale, height: naturalDims.height * scale };
 }
 
 function useMaskPositions(sectionRef: React.RefObject<HTMLElement | null>, cardRefs: React.MutableRefObject<(HTMLDivElement | null)[]>) {
@@ -192,7 +197,7 @@ function Navbar() {
   return (
     <>
       <nav className="fixed top-0 left-0 right-0 z-50 px-4 md:px-6 py-2 md:py-3 bg-white/80 backdrop-blur-md">
-        <div className="max-w-[1600px] mx-auto w-full flex items-center justify-between">
+        <div className="w-full flex items-center justify-between">
         <div className="flex flex-col cursor-pointer" onClick={() => handleScroll('home')}>
           <div className="flex items-center gap-1.5 md:gap-2">
             <Dumbbell className="w-5 h-5 md:w-6 md:h-6 text-[var(--color-brand-primary)]" />
@@ -406,7 +411,7 @@ export default function LandingPage() {
       {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
       <Navbar />
 
-      <section id="home" ref={(el) => { section1Ref.current = el; s1Reveal.containerRef.current = el; }} className="min-h-[100dvh] md:h-screen w-full max-w-[1600px] mx-auto overflow-hidden flex flex-col pt-24 md:pt-24 px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2">
+      <section id="home" ref={(el) => { section1Ref.current = el; s1Reveal.containerRef.current = el; }} className="min-h-[100dvh] md:h-screen w-full overflow-hidden flex flex-col pt-24 md:pt-24 px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2">
         {featureBars.map((bar, i) => (
           <MaskedCard
             key={i}
@@ -455,7 +460,7 @@ export default function LandingPage() {
         </MaskedCard>
       </section>
 
-      <section id="gallery" ref={(el) => { section2Ref.current = el; s2Reveal.containerRef.current = el; }} className="min-h-[100dvh] md:h-[100dvh] w-full max-w-[1600px] mx-auto overflow-hidden flex flex-col pt-1.5 md:pt-2 px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2">
+      <section id="gallery" ref={(el) => { section2Ref.current = el; s2Reveal.containerRef.current = el; }} className="min-h-[100dvh] md:h-[100dvh] w-full overflow-hidden flex flex-col pt-1.5 md:pt-2 px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2">
         <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 grid-rows-[auto_auto_auto_auto] md:grid-rows-[1fr_1fr_0.8fr] gap-1.5 md:gap-2">
           
           <MaskedCard
@@ -530,7 +535,7 @@ export default function LandingPage() {
       </section>
 
       {/* Coaches Section */}
-      <section id="coaches" className="w-full max-w-[1600px] mx-auto flex flex-col px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2 pt-10">
+      <section id="coaches" className="w-full flex flex-col px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2 pt-10">
         <div className="flex flex-col gap-1.5 md:gap-2">
           <div className="rounded-xl md:rounded-2xl bg-black p-5 md:p-10 flex flex-col justify-center items-center text-center">
             <h2 className="text-[clamp(2.5rem,5vw,5rem)] font-bold text-white leading-tight">Expert Coaches</h2>
@@ -542,8 +547,8 @@ export default function LandingPage() {
               { name: 'Nidhi Singh', spec: 'Functional Training', bio: 'Nidhi is an expert in HIIT, flexibility, and functional mobility. Her unique training approach ensures you build a strong, athletic, and resilient body.', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/Nidhi.jpeg_202608011801.jpeg' },
               { name: 'Bhavendra', spec: 'Bodybuilding Pro', bio: 'A competitive bodybuilder, Bhavendra focuses on muscle hypertrophy, diet optimization, and stage prep for serious athletes looking to transform their physique.', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/WhatsApp_Image_2026-08-01_at_5.15.01_202608011759.jpeg' }
             ].map((coach, i) => (
-              <div key={i} className="rounded-xl md:rounded-2xl overflow-hidden relative group cursor-pointer h-[450px] md:h-[550px] xl:h-[650px] w-full" onClick={() => setSelectedCoach(coach)}>
-                <img src={coach.img} alt={coach.name} className="absolute inset-0 w-full h-full object-cover object-top grayscale transition-transform duration-700 group-hover:scale-110 group-hover:grayscale-0" />
+              <div key={i} className="rounded-xl md:rounded-2xl overflow-hidden relative group cursor-pointer aspect-[3/4] md:aspect-auto md:h-[550px] xl:h-[650px] w-full" onClick={() => setSelectedCoach(coach)}>
+                <img src={coach.img} alt={coach.name} className="absolute inset-0 w-full h-full object-cover object-[center_10%] grayscale transition-transform duration-700 group-hover:scale-110 group-hover:grayscale-0" />
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6">
                   <h3 className="text-2xl font-bold text-white">{coach.name}</h3>
@@ -556,7 +561,7 @@ export default function LandingPage() {
       </section>
 
       {/* Programs Section */}
-      <section id="programs" ref={s3Reveal.containerRef} className="min-h-[100dvh] md:h-[100dvh] w-full max-w-[1600px] mx-auto overflow-hidden flex flex-col pt-1.5 md:pt-2 px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2">
+      <section id="programs" ref={s3Reveal.containerRef} className="min-h-[100dvh] md:h-[100dvh] w-full overflow-hidden flex flex-col pt-1.5 md:pt-2 px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2">
         <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 gap-1.5 md:gap-2">
           
           <div className="flex flex-col gap-1.5 md:gap-2">
@@ -616,7 +621,7 @@ export default function LandingPage() {
       </section>
 
       {/* AI Features Section */}
-      <section id="ai-features" className="w-full max-w-[1600px] mx-auto flex flex-col px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2 pt-10">
+      <section id="ai-features" className="w-full flex flex-col px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2 pt-10">
         <div className="flex flex-col gap-1.5 md:gap-2">
           <div className="rounded-xl md:rounded-2xl bg-black border border-stone-800 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_10px_30px_rgba(0,0,0,0.2)] p-5 md:p-10 flex flex-col justify-center items-center text-center">
             <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-bold text-white leading-tight drop-shadow-md">Next-Gen AI Features</h2>
@@ -683,7 +688,7 @@ export default function LandingPage() {
       </section>
 
       {/* Plans Section */}
-      <section id="plans" className="w-full max-w-[1600px] mx-auto flex flex-col px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2 pt-10">
+      <section id="plans" className="w-full flex flex-col px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2 pt-10">
         <div className="flex flex-col gap-1.5 md:gap-2">
           <div className="rounded-xl md:rounded-2xl bg-black p-5 md:p-10 flex flex-col justify-center items-center text-center">
             <h2 className="text-[clamp(2.5rem,5vw,5rem)] font-bold text-white leading-tight">Membership Plans</h2>
@@ -728,7 +733,7 @@ export default function LandingPage() {
       </section>
 
       {/* Community Section */}
-      <section className="w-full max-w-[1600px] mx-auto flex flex-col pt-1.5 md:pt-2 px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2">
+      <section className="w-full flex flex-col pt-1.5 md:pt-2 px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2">
         <div className="rounded-xl md:rounded-2xl bg-black p-6 md:p-10 lg:p-16 text-center flex flex-col items-center relative">
           <p className="text-sm font-bold uppercase tracking-widest text-[var(--color-brand-primary)] mb-4">Reviews</p>
           <h2 className="text-[clamp(2.5rem,5vw,4rem)] font-black text-white leading-[0.9] mb-12">What Our<br/>Members Say</h2>
@@ -919,24 +924,32 @@ export default function LandingPage() {
 
       {/* Review Modal */}
       
-      {/* Coach Modal */}
+                  {/* Coach Modal */}
       {selectedCoach && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedCoach(null)} />
           <div className="relative w-full max-w-4xl bg-stone-900 rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh]">
-            <div className="w-full md:w-1/2 h-[400px] md:h-auto shrink-0">
-              <img src={selectedCoach.img} alt={selectedCoach.name} className="w-full h-full object-cover object-top" />
-            </div>
-            <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center overflow-y-auto">
-              <p className="text-[var(--color-brand-primary)] font-bold tracking-widest uppercase text-sm mb-2">{selectedCoach.spec}</p>
-              <h3 className="text-4xl md:text-5xl font-black text-white mb-6 leading-tight">{selectedCoach.name}</h3>
-              <p className="text-stone-300 text-lg leading-relaxed mb-8">{selectedCoach.bio}</p>
-              <button 
+            <button 
                 onClick={() => setSelectedCoach(null)}
-                className="self-start px-8 py-3 bg-white text-black font-bold rounded-full hover:bg-stone-200 transition-colors"
+                className="absolute top-4 right-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/80 transition-colors z-20 md:hidden"
               >
-                Close
-              </button>
+                <X className="w-6 h-6" />
+            </button>
+            <div className="w-full md:w-1/2 h-[400px] sm:h-[500px] md:h-auto shrink-0 relative bg-neutral-900">
+              <img src={selectedCoach.img} alt={selectedCoach.name} className="w-full h-full object-contain" />
+            </div>
+            <div className="w-full md:w-1/2 p-6 md:p-12 flex flex-col overflow-y-auto">
+              <div className="my-auto">
+                <p className="text-[var(--color-brand-primary)] font-bold tracking-widest uppercase text-xs md:text-sm mb-2">{selectedCoach.spec}</p>
+                <h3 className="text-3xl md:text-5xl font-black text-white mb-4 md:mb-6 leading-tight">{selectedCoach.name}</h3>
+                <p className="text-stone-300 text-base md:text-lg leading-relaxed mb-6 md:mb-8">{selectedCoach.bio}</p>
+                <button 
+                  onClick={() => setSelectedCoach(null)}
+                  className="hidden md:block self-start px-8 py-3 bg-white text-black font-bold rounded-full hover:bg-stone-200 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
