@@ -5,7 +5,7 @@
 -- Please run this exact command to add the email column to your existing members table:
 ALTER TABLE public.members ADD COLUMN IF NOT EXISTS email TEXT UNIQUE;
 -- Then reload the schema cache:
-NOTIFY pgrst, reload_schema;
+NOTIFY pgrst, 'reload schema';
 
 -- ==========================================
 -- 1. Core Users & Admin Tables

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
-import { Activity, Users, IndianRupee, TrendingUp, Bell, Search, Settings, ArrowUpRight, ArrowDownRight, ClipboardList, CheckCircle, XCircle, Database } from 'lucide-react';
+import { Activity, Users, IndianRupee, TrendingUp, Bell, Search, Settings, ArrowUpRight, ArrowDownRight, ClipboardList, CheckCircle, XCircle, Database, Star, MessageSquare, Trash2, Edit2 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
@@ -17,6 +17,7 @@ export default function AdminDashboard() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [members, setMembers] = useState<any[]>([]);
   const [attendance, setAttendance] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [editingMember, setEditingMember] = useState<any>(null);
   const [memberForm, setMemberForm] = useState({ name: '', plan: 'Basic', status: 'Active' });
@@ -179,10 +180,22 @@ export default function AdminDashboard() {
       }
     };
     
+    const fetchReviews = async () => {
+      if (!supabase) return;
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        setReviews(data);
+      }
+    };
+    
     fetchRequests();
     fetchPlanRequests();
     fetchMembers();
     fetchAttendance();
+    fetchReviews();
   }, []);
 
   const updateTrialStatus = async (id: number, status: string) => {
@@ -194,6 +207,31 @@ export default function AdminDashboard() {
       
     if (!error) {
       setTrialRequests(trialRequests.map(req => req.id === id ? { ...req, status } : req));
+    }
+  };
+
+  const deleteReview = async (id: number) => {
+    if (!supabase) {
+      setReviews(reviews.filter(r => r.id !== id));
+      return;
+    }
+    const { error } = await supabase.from('reviews').delete().eq('id', id);
+    if (!error) {
+      setReviews(reviews.filter(r => r.id !== id));
+    }
+  };
+
+  const editReview = async (review: any) => {
+    const newText = window.prompt("Edit review text:", review.text);
+    if (newText && newText !== review.text) {
+      if (!supabase) {
+        setReviews(reviews.map(r => r.id === review.id ? { ...r, text: newText } : r));
+        return;
+      }
+      const { error } = await supabase.from('reviews').update({ text: newText }).eq('id', review.id);
+      if (!error) {
+        setReviews(reviews.map(r => r.id === review.id ? { ...r, text: newText } : r));
+      }
     }
   };
 
@@ -354,6 +392,7 @@ export default function AdminDashboard() {
             { id: 'members', icon: Users, label: 'Member CRM' },
             { id: 'dues', icon: IndianRupee, label: 'Dues & Payments' },
             { id: 'trials', icon: ClipboardList, label: 'Trial Requests' },
+            { id: 'reviews', icon: Star, label: 'Reviews' },
             { id: 'logout', icon: XCircle, label: 'Log Out' },
           ].map((tab) => (
             <Button 
@@ -728,6 +767,55 @@ export default function AdminDashboard() {
                           </Button>
                         </div>
                       )}
+                    </Card>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+
+          {activeTab === 'reviews' && (
+            <>
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-3xl font-black tracking-tight">Review Management</h2>
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                {reviews.length === 0 ? (
+                  <Card className="text-center py-12">
+                    <p className="text-neutral-500 font-bold">No reviews found.</p>
+                  </Card>
+                ) : (
+                  reviews.map((review) => (
+                    <Card key={review.id} className="flex flex-col gap-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex gap-4">
+                          <div className="w-12 h-12 rounded-full bg-neutral-200 flex items-center justify-center font-bold text-xl text-black">
+                            {review.name.charAt(0)}
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-lg">{review.name}</h4>
+                            <div className="flex gap-2 text-sm text-neutral-500 font-medium mb-1">
+                              <span>{review.status || 'Member'}</span> • 
+                              <span>{review.gender || 'Not specified'}</span> •
+                              <span>{review.created_at ? new Date(review.created_at).toLocaleDateString() : ''}</span>
+                            </div>
+                            <div className="flex text-[var(--color-brand-primary)]">
+                              {[...Array(review.rating || 5)].map((_, j) => (
+                                <Star key={j} className="w-4 h-4 fill-current" />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="default" className="text-blue-500 hover:text-blue-700 px-3 py-2 h-auto" onClick={() => editReview(review)}>
+                            <Edit2 className="w-5 h-5" />
+                          </Button>
+                          <Button variant="default" className="text-red-500 hover:text-red-700 px-3 py-2 h-auto" onClick={() => deleteReview(review.id)}>
+                            <Trash2 className="w-5 h-5" />
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-sm font-medium bg-[var(--color-neu-bg)] p-4 rounded-xl">"{review.text}"</p>
                     </Card>
                   ))
                 )}

@@ -9,6 +9,8 @@ import LandingPage from './pages/LandingPage';
 import MemberDashboard from './pages/MemberDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminLogin from './pages/AdminLogin';
+import CommunityPage from './pages/CommunityPage';
+import GymChatbot from './components/GymChatbot';
 
 export default function App() {
   return (
@@ -18,7 +20,9 @@ export default function App() {
         <Route path="/member" element={<MemberDashboard />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/login" element={<AdminLogin />} />
+        <Route path="/community" element={<CommunityPage />} />
       </Routes>
+      <GymChatbot />
     </BrowserRouter>
   );
 }

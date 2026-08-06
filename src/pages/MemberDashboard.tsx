@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Activity, Calendar, Clock, CreditCard, Play, Plus, History, Users, Dumbbell, Wind, AlertCircle, ArrowLeft, ClipboardList, Bell } from 'lucide-react';
+import { Activity, Calendar, Clock, CreditCard, Play, Plus, History, Users, Dumbbell, Wind, AlertCircle, ArrowLeft, ClipboardList, Bell, LineChart as LineChartIcon, TrendingUp, Award } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
@@ -126,10 +127,6 @@ export default function MemberDashboard() {
     }, 1500);
   };
 
-  // Receptionist State
-  const [chatMessage, setChatMessage] = useState('');
-  const [chatHistory, setChatHistory] = useState<any[]>([]);
-
   const generatePlanner = async () => {
     if (!plannerGoal || !plannerWeight) return;
     setIsAiLoading(true);
@@ -192,31 +189,6 @@ export default function MemberDashboard() {
     }
   };
 
-  const sendMessage = async () => {
-    if (!chatMessage.trim()) return;
-    
-    const newMessage = { role: 'user', text: chatMessage };
-    const newHistory = [...chatHistory, newMessage];
-    setChatHistory(newHistory);
-    setChatMessage('');
-    setIsAiLoading(true);
-    
-    try {
-      const res = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: newMessage.text, history: chatHistory })
-      });
-      const data = await res.json();
-      setChatHistory([...newHistory, { role: 'model', text: data.text }]);
-    } catch (error) {
-      console.error(error);
-      setChatHistory([...newHistory, { role: 'model', text: "Sorry, I'm having trouble connecting right now." }]);
-    } finally {
-      setIsAiLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[var(--color-neu-base)] flex flex-col md:flex-row">
       {/* Sidebar */}
@@ -238,6 +210,7 @@ export default function MemberDashboard() {
         <nav className="flex md:flex-col gap-4 overflow-x-auto pb-4 md:pb-0">
           {[
             { id: 'workout', icon: Play, label: 'Workout Tracker' },
+            { id: 'progress', icon: LineChartIcon, label: 'Progress Tracking' },
             { id: 'messages', icon: Bell, label: `Messages ${myMessages.filter(m => !m.is_read).length > 0 ? `(${myMessages.filter(m => !m.is_read).length})` : ''}` },
             { id: 'myplans', icon: ClipboardList, label: 'My Plans & Attendance' },
             { id: 'aicoach', icon: Wind, label: 'Smart Planner' },
@@ -245,7 +218,6 @@ export default function MemberDashboard() {
             { id: 'formchecker', icon: Activity, label: 'Form Checker' },
             { id: 'buddymatcher', icon: Users, label: 'Buddy Matcher' },
             { id: 'achievements', icon: Activity, label: 'Achievements' },
-            { id: 'receptionist', icon: Users, label: '24/7 Front Desk' },
             { id: 'classes', icon: Calendar, label: 'Book Classes' },
             { id: 'subscription', icon: CreditCard, label: 'Subscription' },
             { id: 'logout', icon: ArrowLeft, label: 'Log Out' },
@@ -300,6 +272,93 @@ export default function MemberDashboard() {
           transition={{ duration: 0.3 }}
           className="max-w-4xl mx-auto space-y-8"
         >
+          {activeTab === 'progress' && (
+            <>
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-3xl font-black tracking-tight">Progress Tracking</h2>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <Card className="p-6">
+                  <div className="flex items-center gap-3 mb-6">
+                    <TrendingUp className="w-6 h-6 text-[var(--color-brand-primary)]" />
+                    <h3 className="text-xl font-bold">Weight History</h3>
+                  </div>
+                  <div className="h-64 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={[
+                        { month: 'Jan', weight: 85 },
+                        { month: 'Feb', weight: 83 },
+                        { month: 'Mar', weight: 81 },
+                        { month: 'Apr', weight: 82 },
+                        { month: 'May', weight: 79 },
+                        { month: 'Jun', weight: 78 }
+                      ]}>
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                        <XAxis dataKey="month" stroke="var(--color-brand-secondary)" fontSize={12} />
+                        <YAxis stroke="var(--color-brand-secondary)" fontSize={12} domain={['dataMin - 2', 'dataMax + 2']} />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: 'var(--color-neu-base)', borderRadius: '12px', border: '1px solid var(--color-neu-border)', fontWeight: 'bold' }}
+                          itemStyle={{ color: 'var(--color-brand-primary)' }}
+                        />
+                        <Line type="monotone" dataKey="weight" stroke="var(--color-brand-primary)" strokeWidth={4} dot={{ r: 6, fill: 'var(--color-brand-primary)' }} activeDot={{ r: 8 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+
+                <Card className="p-6">
+                  <div className="flex items-center gap-3 mb-6">
+                    <Calendar className="w-6 h-6 text-[var(--color-brand-primary)]" />
+                    <h3 className="text-xl font-bold">Attendance Streak</h3>
+                  </div>
+                  <div className="h-64 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={[
+                        { week: 'W1', days: 3 },
+                        { week: 'W2', days: 5 },
+                        { week: 'W3', days: 4 },
+                        { week: 'W4', days: 6 },
+                        { week: 'W5', days: 5 },
+                        { week: 'W6', days: 6 }
+                      ]}>
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.2} vertical={false} />
+                        <XAxis dataKey="week" stroke="var(--color-brand-secondary)" fontSize={12} />
+                        <YAxis stroke="var(--color-brand-secondary)" fontSize={12} />
+                        <Tooltip 
+                          cursor={{ fill: 'var(--color-neu-border)', opacity: 0.4 }}
+                          contentStyle={{ backgroundColor: 'var(--color-neu-base)', borderRadius: '12px', border: '1px solid var(--color-neu-border)', fontWeight: 'bold' }}
+                        />
+                        <Bar dataKey="days" fill="var(--color-brand-primary)" radius={[6, 6, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+              </div>
+
+              <Card className="p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <Award className="w-6 h-6 text-[var(--color-brand-primary)]" />
+                  <h3 className="text-xl font-bold">Milestone Achievements</h3>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    { title: '1 Month Streak', desc: 'Attended 4 weeks consistently', achieved: true },
+                    { title: 'Weight Goal', desc: 'Dropped 5kg from start', achieved: true },
+                    { title: 'Strength Master', desc: 'Lifted 100kg total volume', achieved: false },
+                    { title: 'Early Bird', desc: '5 workouts before 8 AM', achieved: true },
+                  ].map((milestone, i) => (
+                    <div key={i} className={`p-4 rounded-xl border-2 transition-all ${milestone.achieved ? 'border-[var(--color-brand-primary)] bg-[var(--color-brand-primary)]/5' : 'border-[var(--color-neu-border)] bg-[var(--color-neu-base)] opacity-60'}`}>
+                      <Award className={`w-8 h-8 mb-2 ${milestone.achieved ? 'text-[var(--color-brand-primary)]' : 'text-neutral-400'}`} />
+                      <div className="font-bold mb-1">{milestone.title}</div>
+                      <div className="text-xs opacity-70 leading-tight">{milestone.desc}</div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </>
+          )}
+
           {activeTab === 'messages' && (
             <>
               <div className="flex justify-between items-center mb-8">
@@ -603,59 +662,6 @@ export default function MemberDashboard() {
                   <p className="font-medium opacity-90">{formFeedback}</p>
                 </Card>
               )}
-            </>
-          )}
-
-          {activeTab === 'receptionist' && (
-            <>
-              <h2 className="text-3xl font-black tracking-tight mb-8">24/7 Front Desk</h2>
-              <Card className="flex flex-col h-[600px] p-0 overflow-hidden">
-                <div className="bg-[var(--color-brand-secondary)] p-6 text-white flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                    <Users className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg">JAI BALAJI ELITE FITNESS Assistant</h3>
-                    <p className="text-sm opacity-80">Ask about rules, classes, or tips</p>
-                  </div>
-                </div>
-                
-                <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-[var(--color-neu-light)]">
-                  {chatHistory.length === 0 ? (
-                    <div className="text-center opacity-50 mt-10 font-medium">
-                      Start a conversation...<br/>e.g. "When is the next Yoga class?"
-                    </div>
-                  ) : (
-                    chatHistory.map((msg, i) => (
-                      <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[80%] p-4 rounded-2xl font-medium ${msg.role === 'user' ? 'bg-[var(--color-brand-primary)] text-black rounded-tr-sm' : 'bg-white rounded-tl-sm shadow-sm'}`}>
-                          {msg.text}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                  {isAiLoading && (
-                    <div className="flex justify-start">
-                      <div className="max-w-[80%] p-4 rounded-2xl font-medium bg-white rounded-tl-sm shadow-sm flex items-center gap-2">
-                        <div className="w-2 h-2 bg-neutral-300 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-neutral-300 rounded-full animate-bounce" style={{animationDelay: '100ms'}}></div>
-                        <div className="w-2 h-2 bg-neutral-300 rounded-full animate-bounce" style={{animationDelay: '200ms'}}></div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-4 bg-white border-t border-neutral-100 flex gap-2">
-                  <Input 
-                    placeholder="Type your message..." 
-                    className="flex-1"
-                    value={chatMessage}
-                    onChange={e => setChatMessage(e.target.value)}
-                    onKeyPress={e => e.key === 'Enter' && sendMessage()}
-                  />
-                  <Button variant="primary" onClick={sendMessage} disabled={isAiLoading}>Send</Button>
-                </div>
-              </Card>
             </>
           )}
 

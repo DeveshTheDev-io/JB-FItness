@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { X } from 'lucide-react';
+import { X, Dumbbell, MapPin } from 'lucide-react';
 
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop';
 const SECTION2_IMAGE = 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=1470&auto=format&fit=crop';
@@ -15,7 +15,7 @@ const services = [
   { name: 'Strength\nTraining', num: '01', active: true },
   { name: 'Power\nLifting', num: '02', active: false },
   { name: 'CrossFit\nClasses', num: '03', active: false },
-  { name: 'Personal\nTraining', num: null, active: false },
+  { name: 'Personal\nTraining', num: '04', active: false },
 ];
 
 function useIsMobile() {
@@ -56,17 +56,18 @@ function useStaggeredReveal(count: number, threshold = 0.15) {
   return { containerRef, getAnimStyle };
 }
 
-function useImageWidth(src: string, sectionHeight: number) {
-  const [width, setWidth] = useState(0);
+function useImageDimensions(src: string, sectionWidth: number, sectionHeight: number) {
+  const [dims, setDims] = useState({ width: 0, height: 0 });
   useEffect(() => {
-    if (!sectionHeight) return;
+    if (!sectionWidth || !sectionHeight) return;
     const img = new Image();
     img.src = src;
     img.onload = () => {
-      setWidth(img.naturalWidth * (sectionHeight / img.naturalHeight));
+      const scale = Math.max(sectionWidth / img.naturalWidth, sectionHeight / img.naturalHeight);
+      setDims({ width: img.naturalWidth * scale, height: img.naturalHeight * scale });
     };
-  }, [src, sectionHeight]);
-  return width;
+  }, [src, sectionWidth, sectionHeight]);
+  return dims;
 }
 
 function useMaskPositions(sectionRef: React.RefObject<HTMLElement | null>, cardRefs: React.MutableRefObject<(HTMLDivElement | null)[]>) {
@@ -104,17 +105,19 @@ function useMaskPositions(sectionRef: React.RefObject<HTMLElement | null>, cardR
 }
 
 function MaskedCard({ 
-  bgImage, position, imageWidth, focalX, className, children, cardRef, style 
+  bgImage, position, imageDims, focalX, className, children, cardRef, style 
 }: { 
-  bgImage: string, position: any, imageWidth: number, focalX: number, className: string, children: React.ReactNode, cardRef: (el: HTMLDivElement | null) => void, style?: React.CSSProperties
+  bgImage: string, position: any, imageDims: { width: number, height: number }, focalX: number, className: string, children: React.ReactNode, cardRef: (el: HTMLDivElement | null) => void, style?: React.CSSProperties
 }) {
-  const overflow = imageWidth > (position?.sw || 0) ? imageWidth - (position?.sw || 0) : 0;
-  const focalOffset = overflow * focalX;
+  const overflowX = imageDims.width > (position?.sw || 0) ? imageDims.width - (position?.sw || 0) : 0;
+  const overflowY = imageDims.height > (position?.sh || 0) ? imageDims.height - (position?.sh || 0) : 0;
+  const focalOffsetX = overflowX * focalX;
+  const focalOffsetY = overflowY * 0.5;
 
   const bgStyle: React.CSSProperties = position?.sh ? {
     backgroundImage: `url(${bgImage})`,
-    backgroundSize: `auto ${position.sh}px`,
-    backgroundPosition: `-${position.x + focalOffset}px -${position.y}px`,
+    backgroundSize: `${imageDims.width}px ${imageDims.height}px`,
+    backgroundPosition: `-${position.x + focalOffsetX}px -${position.y + focalOffsetY}px`,
     backgroundRepeat: 'no-repeat'
   } : {};
 
@@ -157,7 +160,7 @@ function Navbar() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const [user, setUser] = useState<{role: string} | null>(null);
-
+  
   useEffect(() => {
     const stored = localStorage.getItem('currentUser');
     if (stored) {
@@ -188,16 +191,21 @@ function Navbar() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 md:px-6 py-2 md:py-3 bg-white/80 backdrop-blur-md">
+      <nav className="fixed top-0 left-0 right-0 z-50 px-4 md:px-6 py-2 md:py-3 bg-white/80 backdrop-blur-md">
+        <div className="max-w-[1600px] mx-auto w-full flex items-center justify-between">
         <div className="flex flex-col cursor-pointer" onClick={() => handleScroll('home')}>
-          <span className="text-xl md:text-2xl font-extrabold uppercase tracking-tight leading-none">JAI</span>
-          <span className="text-xl md:text-2xl font-extrabold uppercase tracking-tight leading-none -mt-1.5 md:-mt-2">BALAJI</span>
-          <span className="text-[8px] md:text-[9px] font-medium leading-none mt-1.5 md:mt-2 uppercase">Elite Fitness</span>
+          <div className="flex items-center gap-1.5 md:gap-2">
+            <Dumbbell className="w-5 h-5 md:w-6 md:h-6 text-[var(--color-brand-primary)]" />
+            <div className="flex flex-col">
+              <span className="text-xl md:text-2xl font-black uppercase leading-none text-black">JAI BALAJI</span>
+              <span className="text-[9px] md:text-[10px] font-bold leading-none mt-1 tracking-[0.2em] uppercase text-[var(--color-brand-primary)]">Elite Fitness</span>
+            </div>
+          </div>
         </div>
         
         <div className="hidden lg:flex items-center gap-8">
-          {['Home', 'Programs', 'Coaches', 'Gallery', 'Contact'].map((item) => (
-            <button key={item} onClick={() => handleScroll(item.toLowerCase())} className="text-sm font-bold text-black hover:opacity-70 transition-opacity uppercase">{item}</button>
+          {['Home', 'Plans', 'Coaches', 'Community', 'Contact'].map((item) => (
+            <button key={item} onClick={() => item === 'Community' ? navigate('/community') : handleScroll(item.toLowerCase())} className="text-sm font-bold text-black hover:opacity-70 transition-opacity uppercase">{item}</button>
           ))}
         </div>
 
@@ -221,14 +229,15 @@ function Navbar() {
           <span className={`absolute h-0.5 w-6 bg-black rounded-full transition-all duration-300 ease-[cubic-bezier(0.76,0,0.24,1)] ${open ? 'opacity-0 scale-x-0' : 'opacity-100 scale-x-100'}`} />
           <span className={`absolute h-0.5 w-6 bg-black rounded-full transition-all duration-300 ease-[cubic-bezier(0.76,0,0.24,1)] ${open ? '-rotate-45 translate-y-0' : 'translate-y-2'}`} />
         </button>
+        </div>
       </nav>
 
       {/* Mobile Menu */}
       <div className={`fixed inset-0 z-40 lg:hidden ${open ? 'pointer-events-auto' : 'pointer-events-none'}`}>
         <div className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-500 ${open ? 'opacity-100' : 'opacity-0'}`} onClick={() => setOpen(false)} />
         <div className={`absolute top-0 right-0 h-full w-[85%] max-w-sm bg-white shadow-2xl flex flex-col justify-center px-8 gap-1 transition-transform duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] ${open ? 'translate-x-0' : 'translate-x-full'}`}>
-          {['Home', 'Programs', 'Coaches', 'Gallery', 'Contact'].map((item, i) => (
-            <button key={item} onClick={() => handleScroll(item.toLowerCase())} className="text-4xl font-bold text-black hover:text-neutral-500 transition-all duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] text-left" style={{ opacity: open ? 1 : 0, transform: open ? 'translateX(0)' : 'translateX(32px)', transitionDelay: `${100 + i * 60}ms` }}>
+          {['Home', 'Plans', 'Coaches', 'Community', 'Contact'].map((item, i) => (
+            <button key={item} onClick={() => { setOpen(false); item === 'Community' ? navigate('/community') : handleScroll(item.toLowerCase()); }} className="text-4xl font-bold text-black hover:text-neutral-500 transition-all duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] text-left" style={{ opacity: open ? 1 : 0, transform: open ? 'translateX(0)' : 'translateX(32px)', transitionDelay: `${100 + i * 60}ms` }}>
               {item}
             </button>
           ))}
@@ -258,6 +267,7 @@ function Navbar() {
 }
 
 export default function LandingPage() {
+  const [selectedCoach, setSelectedCoach] = useState<any>(null);
   const [showSplash, setShowSplash] = useState(true);
   const [showTrialModal, setShowTrialModal] = useState(false);
   const [trialForm, setTrialForm] = useState({ name: '', phone: '', email: '' });
@@ -265,8 +275,21 @@ export default function LandingPage() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
 
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewForm, setReviewForm] = useState({ name: '', gender: 'Male', status: 'Member', rating: 5, text: '' });
+
   const [user, setUser] = useState<{role: string} | null>(null);
   useEffect(() => {
+    const fetchReviews = async () => {
+      if (!supabase) return;
+      try {
+        const { data } = await supabase.from('reviews').select('*').order('created_at', { ascending: false });
+        if (data) setReviews(data);
+      } catch (e) {}
+    };
+    fetchReviews();
+
     const stored = localStorage.getItem('currentUser');
     if (stored) {
       try {
@@ -274,6 +297,22 @@ export default function LandingPage() {
       } catch(e) {}
     }
   }, []);
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (supabase) {
+      try {
+        const { data } = await supabase.from('reviews').insert([{ ...reviewForm }]).select();
+        if (data) {
+          setReviews([data[0], ...reviews]);
+        }
+      } catch (e) {}
+    } else {
+      setReviews([{ ...reviewForm, id: Math.random(), created_at: new Date().toISOString() }, ...reviews]);
+    }
+    setShowReviewModal(false);
+    setReviewForm({ name: '', gender: 'Male', status: 'Member', rating: 5, text: '' });
+  };
 
   const handleAuthClick = (mode: 'signin' | 'signup') => {
     if (user) {
@@ -325,13 +364,13 @@ export default function LandingPage() {
   const section1Ref = useRef<HTMLElement>(null);
   const s1Cards = useRef<(HTMLDivElement | null)[]>([]);
   const s1Positions = useMaskPositions(section1Ref, s1Cards);
-  const s1ImgWidth = useImageWidth(HERO_IMAGE, s1Positions[0]?.sh || 0);
+  const s1ImgDims = useImageDimensions(HERO_IMAGE, s1Positions[0]?.sw || 0, s1Positions[0]?.sh || 0);
   const s1Reveal = useStaggeredReveal(4);
 
   const section2Ref = useRef<HTMLElement>(null);
   const s2Cards = useRef<(HTMLDivElement | null)[]>([]);
   const s2Positions = useMaskPositions(section2Ref, s2Cards);
-  const s2ImgWidth = useImageWidth(SECTION2_IMAGE, s2Positions[0]?.sh || 0);
+  const s2ImgDims = useImageDimensions(SECTION2_IMAGE, s2Positions[0]?.sw || 0, s2Positions[0]?.sh || 0);
   const s2Reveal = useStaggeredReveal(4);
 
   const s3Reveal = useStaggeredReveal(4);
@@ -367,26 +406,27 @@ export default function LandingPage() {
       {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
       <Navbar />
 
-      <section id="home" ref={(el) => { section1Ref.current = el; s1Reveal.containerRef.current = el; }} className="h-screen w-full overflow-hidden flex flex-col pt-24 md:pt-24 px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2">
+      <section id="home" ref={(el) => { section1Ref.current = el; s1Reveal.containerRef.current = el; }} className="min-h-[100dvh] md:h-screen w-full max-w-[1600px] mx-auto overflow-hidden flex flex-col pt-24 md:pt-24 px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2">
         {featureBars.map((bar, i) => (
           <MaskedCard
             key={i}
             bgImage={HERO_IMAGE}
             position={s1Positions[i]}
-            imageWidth={s1ImgWidth}
+            imageDims={s1ImgDims}
             focalX={s1FocalX}
             cardRef={(el) => (s1Cards.current[i] = el)}
             className="w-full h-14 md:h-20 shrink-0 rounded-xl md:rounded-2xl overflow-hidden relative"
             style={s1Reveal.getAnimStyle(i)}
           >
-            <span className="flex items-center justify-center h-full text-white text-lg md:text-3xl font-bold text-center relative z-10 drop-shadow-md">{bar}</span>
+            <div className="absolute inset-0 bg-black/40 z-0" />
+            <span className="flex items-center justify-center h-full text-white/95 text-lg md:text-3xl font-black uppercase tracking-[0.2em] text-center relative z-10 drop-shadow-xl">{bar}</span>
           </MaskedCard>
         ))}
 
         <MaskedCard
           bgImage={HERO_IMAGE}
           position={s1Positions[3]}
-          imageWidth={s1ImgWidth}
+          imageDims={s1ImgDims}
           focalX={s1FocalX}
           cardRef={(el) => (s1Cards.current[3] = el)}
           className="w-full flex-1 min-h-0 rounded-xl md:rounded-2xl overflow-hidden relative"
@@ -397,7 +437,14 @@ export default function LandingPage() {
             We provide elite fitness training<br/>that matches current sports science.
           </p>
           <div className="absolute bottom-5 left-3 md:bottom-8 md:left-4 z-10">
-            <span className="block text-white/90 text-xs md:text-sm font-semibold mb-1 md:mb-2 drop-shadow">Premier Gym in City Center</span>
+            <div className="flex items-center gap-3 mb-4 md:mb-6">
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/20 flex items-center justify-center shrink-0 shadow-xl">
+                <MapPin className="w-4 h-4 md:w-5 md:h-5 text-white" />
+              </div>
+              <span className="text-white text-xs md:text-sm font-bold uppercase tracking-widest drop-shadow-lg max-w-[200px] md:max-w-none leading-snug opacity-90">
+                3rd Floor, Shree Banke Bihari Plaza<br className="md:hidden" /> City Center, Gwalior
+              </span>
+            </div>
             <h1 className="text-white text-[clamp(3rem,11vw,11rem)] font-bold leading-[0.79] tracking-tight drop-shadow-lg">
               Sculpt<br/>Legacy
             </h1>
@@ -408,27 +455,25 @@ export default function LandingPage() {
         </MaskedCard>
       </section>
 
-      <section id="gallery" ref={(el) => { section2Ref.current = el; s2Reveal.containerRef.current = el; }} className="min-h-screen md:h-screen w-full overflow-hidden flex flex-col pt-1.5 md:pt-2 px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2">
+      <section id="gallery" ref={(el) => { section2Ref.current = el; s2Reveal.containerRef.current = el; }} className="min-h-[100dvh] md:h-[100dvh] w-full max-w-[1600px] mx-auto overflow-hidden flex flex-col pt-1.5 md:pt-2 px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2">
         <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 grid-rows-[auto_auto_auto_auto] md:grid-rows-[1fr_1fr_0.8fr] gap-1.5 md:gap-2">
           
           <MaskedCard
             bgImage={SECTION2_IMAGE}
             position={s2Positions[0]}
-            imageWidth={s2ImgWidth}
+            imageDims={s2ImgDims}
             focalX={s2FocalX}
             cardRef={(el) => (s2Cards.current[0] = el)}
             className="rounded-xl md:rounded-2xl overflow-hidden relative min-h-[160px] md:min-h-0"
             style={s2Reveal.getAnimStyle(0)}
           >
             <div className="absolute inset-0 bg-black/40 z-0" />
-            <h2 className="absolute top-4 left-5 md:top-6 md:left-7 text-white text-2xl md:text-3xl font-bold z-10">Facility Gallery</h2>
-            <p className="absolute bottom-4 left-5 md:bottom-6 md:left-7 text-white text-xs md:text-sm font-semibold z-10">State-of-the-art equipment</p>
           </MaskedCard>
 
           <MaskedCard
             bgImage={SECTION2_IMAGE}
             position={s2Positions[1]}
-            imageWidth={s2ImgWidth}
+            imageDims={s2ImgDims}
             focalX={s2FocalX}
             cardRef={(el) => (s2Cards.current[1] = el)}
             className="md:row-span-2 rounded-xl md:rounded-2xl overflow-hidden relative min-h-[200px] md:min-h-0"
@@ -446,7 +491,7 @@ export default function LandingPage() {
           <MaskedCard
             bgImage={SECTION2_IMAGE}
             position={s2Positions[2]}
-            imageWidth={s2ImgWidth}
+            imageDims={s2ImgDims}
             focalX={s2FocalX}
             cardRef={(el) => (s2Cards.current[2] = el)}
             className="rounded-xl md:rounded-2xl overflow-hidden relative min-h-[160px] md:min-h-0"
@@ -461,7 +506,7 @@ export default function LandingPage() {
           <MaskedCard
             bgImage={SECTION2_IMAGE}
             position={s2Positions[3]}
-            imageWidth={s2ImgWidth}
+            imageDims={s2ImgDims}
             focalX={s2FocalX}
             cardRef={(el) => (s2Cards.current[3] = el)}
             className="col-span-1 md:col-span-2 rounded-xl md:rounded-2xl overflow-hidden relative min-h-[200px] md:min-h-0"
@@ -485,20 +530,21 @@ export default function LandingPage() {
       </section>
 
       {/* Coaches Section */}
-      <section id="coaches" className="w-full flex flex-col px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2 pt-10">
+      <section id="coaches" className="w-full max-w-[1600px] mx-auto flex flex-col px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2 pt-10">
         <div className="flex flex-col gap-1.5 md:gap-2">
           <div className="rounded-xl md:rounded-2xl bg-black p-5 md:p-10 flex flex-col justify-center items-center text-center">
             <h2 className="text-[clamp(2.5rem,5vw,5rem)] font-bold text-white leading-tight">Expert Coaches</h2>
             <p className="text-white/70">Train with the best to achieve your ultimate goals</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5 md:gap-2">
-            {[
-              { name: 'Sushant Agrawal', spec: 'Powerlifting Specialist', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/Sushant.jpeg_202608011758.jpeg' },
-              { name: 'Nidhi Singh', spec: 'Functional Training', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/Nidhi.jpeg_202608011801.jpeg' },
-              { name: 'Bhavendra', spec: 'Bodybuilding Pro', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/WhatsApp_Image_2026-08-01_at_5.15.01_202608011759.jpeg' }
+            {[ 
+              { name: 'Sushant Agrawal', spec: 'Powerlifting Specialist', bio: 'With over a decade of experience, Sushant specializes in raw powerlifting, strength conditioning, and helping members reach peak physical performance.', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/Sushant.jpeg_202608011758.jpeg' },
+              { name: 'Nidhi Singh', spec: 'Functional Training', bio: 'Nidhi is an expert in HIIT, flexibility, and functional mobility. Her unique training approach ensures you build a strong, athletic, and resilient body.', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/Nidhi.jpeg_202608011801.jpeg' },
+              { name: 'Bhavendra', spec: 'Bodybuilding Pro', bio: 'A competitive bodybuilder, Bhavendra focuses on muscle hypertrophy, diet optimization, and stage prep for serious athletes looking to transform their physique.', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/WhatsApp_Image_2026-08-01_at_5.15.01_202608011759.jpeg' }
             ].map((coach, i) => (
-              <div key={i} className="rounded-xl md:rounded-2xl overflow-hidden relative group cursor-pointer h-96 md:h-[450px]">
+              <div key={i} className="rounded-xl md:rounded-2xl overflow-hidden relative group cursor-pointer h-[450px] md:h-[550px] xl:h-[650px] w-full" onClick={() => setSelectedCoach(coach)}>
                 <img src={coach.img} alt={coach.name} className="absolute inset-0 w-full h-full object-cover object-top grayscale transition-transform duration-700 group-hover:scale-110 group-hover:grayscale-0" />
+
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6">
                   <h3 className="text-2xl font-bold text-white">{coach.name}</h3>
                   <p className="text-sm text-white/70 font-semibold">{coach.spec}</p>
@@ -510,7 +556,7 @@ export default function LandingPage() {
       </section>
 
       {/* Programs Section */}
-      <section id="programs" ref={s3Reveal.containerRef} className="min-h-screen md:h-screen w-full overflow-hidden flex flex-col pt-1.5 md:pt-2 px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2">
+      <section id="programs" ref={s3Reveal.containerRef} className="min-h-[100dvh] md:h-[100dvh] w-full max-w-[1600px] mx-auto overflow-hidden flex flex-col pt-1.5 md:pt-2 px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2">
         <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 gap-1.5 md:gap-2">
           
           <div className="flex flex-col gap-1.5 md:gap-2">
@@ -570,7 +616,7 @@ export default function LandingPage() {
       </section>
 
       {/* AI Features Section */}
-      <section id="ai-features" className="w-full flex flex-col px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2 pt-10">
+      <section id="ai-features" className="w-full max-w-[1600px] mx-auto flex flex-col px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2 pt-10">
         <div className="flex flex-col gap-1.5 md:gap-2">
           <div className="rounded-xl md:rounded-2xl bg-black border border-stone-800 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_10px_30px_rgba(0,0,0,0.2)] p-5 md:p-10 flex flex-col justify-center items-center text-center">
             <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-bold text-white leading-tight drop-shadow-md">Next-Gen AI Features</h2>
@@ -637,7 +683,7 @@ export default function LandingPage() {
       </section>
 
       {/* Plans Section */}
-      <section id="plans" className="w-full flex flex-col px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2 pt-10">
+      <section id="plans" className="w-full max-w-[1600px] mx-auto flex flex-col px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2 pt-10">
         <div className="flex flex-col gap-1.5 md:gap-2">
           <div className="rounded-xl md:rounded-2xl bg-black p-5 md:p-10 flex flex-col justify-center items-center text-center">
             <h2 className="text-[clamp(2.5rem,5vw,5rem)] font-bold text-white leading-tight">Membership Plans</h2>
@@ -681,7 +727,69 @@ export default function LandingPage() {
         </div>
       </section>
 
-
+      {/* Community Section */}
+      <section className="w-full max-w-[1600px] mx-auto flex flex-col pt-1.5 md:pt-2 px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2">
+        <div className="rounded-xl md:rounded-2xl bg-black p-6 md:p-10 lg:p-16 text-center flex flex-col items-center relative">
+          <p className="text-sm font-bold uppercase tracking-widest text-[var(--color-brand-primary)] mb-4">Reviews</p>
+          <h2 className="text-[clamp(2.5rem,5vw,4rem)] font-black text-white leading-[0.9] mb-12">What Our<br/>Members Say</h2>
+          
+          <button onClick={() => setShowReviewModal(true)} className="absolute top-6 right-6 md:top-10 md:right-10 px-5 py-2.5 bg-white text-black font-bold rounded-full text-sm hover:scale-105 transition-transform">
+            Share Your Experience
+          </button>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 w-full max-w-6xl">
+            {(reviews.length > 0 ? reviews : [
+              {
+                name: "Arjun Verma",
+                role: "Powerlifter",
+                text: "The equipment at Jai Balaji is unmatched. The environment pushes you to your absolute limits.",
+                status: "Member",
+                rating: 5
+              },
+              {
+                name: "Priya Sharma",
+                role: "Fitness Enthusiast",
+                text: "Love the AI features! The smart planner completely changed my workout routine.",
+                status: "Member",
+                rating: 5
+              },
+              {
+                name: "Vikas Patel",
+                role: "CrossFit Athlete",
+                text: "The community here is incredible. Professional coaches and state-of-the-art facilities.",
+                status: "Past Member",
+                rating: 5
+              }
+            ]).map((review, i) => (
+              <div key={i} className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 md:p-8 text-left hover:border-neutral-700 transition-colors">
+                <div className="flex text-[var(--color-brand-primary)] mb-4">
+                  {[...Array(review.rating || 5)].map((_, j) => (
+                    <svg key={j} width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  ))}
+                </div>
+                <p className="text-white/80 font-medium mb-6 text-sm md:text-base leading-relaxed">"{review.text}"</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center text-white font-bold group relative cursor-pointer">
+                    {review.name.charAt(0)}
+                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 border border-neutral-700">
+                      {review.status || 'Member'} • {review.gender || 'Not specified'}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-bold text-sm cursor-pointer group relative">
+                      {review.name}
+                      <div className="absolute -top-10 left-0 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 border border-neutral-700">
+                        {review.status || 'Member'} • {review.gender || 'Not specified'}
+                      </div>
+                    </h4>
+                    <p className="text-neutral-500 font-semibold text-xs">{review.role || review.status || 'Member'}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* Footer / Contact */}
       <footer id="contact" className="w-full px-3 md:px-5 pb-3">
@@ -689,11 +797,13 @@ export default function LandingPage() {
           <div>
             <h2 className="text-3xl font-black mb-4">JAI BALAJI ELITE FITNESS</h2>
             <p className="text-sm font-semibold opacity-70 max-w-xs mb-4">Elevating fitness standards with elite equipment and professional coaching.</p>
-            <p className="text-sm font-bold text-neutral-400">Powered by Devscomic A.I</p>
+            <p className="text-sm font-bold text-neutral-400">
+              Powered by <a href="https://dev-ai-agency.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand-primary)] hover:underline hover:opacity-80 transition-all">Devscosmic A.I Agency</a>
+            </p>
           </div>
           <div className="flex flex-col gap-2">
             <h3 className="font-bold mb-2">Contact</h3>
-            <p className="text-sm opacity-70">+91 8770483654</p>
+            <a href="tel:+918770483654" className="text-sm opacity-70 hover:opacity-100 transition-opacity">+91 8770483654</a>
             <p className="text-sm opacity-70">jbfitnesshubthegym@gmail.com</p>
             <p className="text-sm opacity-70">Instagram: @jb_fitness_gym</p>
             <p className="text-sm opacity-70 max-w-xs mt-2">3rd floor, Shree Banke Bihari Plaza, Kailash VIhar, income tax office road, City center, Gwalior - 474002(M.P)</p>
@@ -701,7 +811,6 @@ export default function LandingPage() {
           <div className="flex flex-col gap-2">
             <h3 className="font-bold mb-2">Links</h3>
             <a href="#home" className="text-sm opacity-70 hover:opacity-100 transition-opacity">Home</a>
-            <a href="#programs" className="text-sm opacity-70 hover:opacity-100 transition-opacity">Programs</a>
             <a href="#plans" className="text-sm opacity-70 hover:opacity-100 transition-opacity">Plans</a>
           </div>
         </div>
@@ -804,6 +913,78 @@ export default function LandingPage() {
             >
               Start Your AI Plan
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal */}
+      
+      {/* Coach Modal */}
+      {selectedCoach && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedCoach(null)} />
+          <div className="relative w-full max-w-4xl bg-stone-900 rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh]">
+            <div className="w-full md:w-1/2 h-[400px] md:h-auto shrink-0">
+              <img src={selectedCoach.img} alt={selectedCoach.name} className="w-full h-full object-cover object-top" />
+            </div>
+            <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center overflow-y-auto">
+              <p className="text-[var(--color-brand-primary)] font-bold tracking-widest uppercase text-sm mb-2">{selectedCoach.spec}</p>
+              <h3 className="text-4xl md:text-5xl font-black text-white mb-6 leading-tight">{selectedCoach.name}</h3>
+              <p className="text-stone-300 text-lg leading-relaxed mb-8">{selectedCoach.bio}</p>
+              <button 
+                onClick={() => setSelectedCoach(null)}
+                className="self-start px-8 py-3 bg-white text-black font-bold rounded-full hover:bg-stone-200 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReviewModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowReviewModal(false)} />
+          <div className="relative bg-white w-full max-w-md rounded-2xl p-6 md:p-8 shadow-2xl">
+            <button onClick={() => setShowReviewModal(false)} className="absolute top-4 right-4 text-black hover:opacity-70"><X className="w-6 h-6" /></button>
+            <h2 className="text-2xl font-black mb-6">Share Your Experience</h2>
+            <form onSubmit={handleReviewSubmit} className="flex flex-col gap-4">
+              <div>
+                <label className="block text-sm font-bold mb-1">Name</label>
+                <input required type="text" value={reviewForm.name} onChange={e => setReviewForm({...reviewForm, name: e.target.value})} className="w-full px-4 py-3 bg-neutral-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-black" placeholder="John Doe" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold mb-1">Gender</label>
+                  <select value={reviewForm.gender} onChange={e => setReviewForm({...reviewForm, gender: e.target.value})} className="w-full px-4 py-3 bg-neutral-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-black appearance-none">
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-1">Gym Status</label>
+                  <select value={reviewForm.status} onChange={e => setReviewForm({...reviewForm, status: e.target.value})} className="w-full px-4 py-3 bg-neutral-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-black appearance-none">
+                    <option value="Member">Member</option>
+                    <option value="Non-Member">Non-Member</option>
+                    <option value="Past Member">Past Member</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Rating</label>
+                <div className="flex gap-2 text-[var(--color-brand-primary)]">
+                  {[1,2,3,4,5].map(star => (
+                    <svg key={star} onClick={() => setReviewForm({...reviewForm, rating: star})} className={`w-8 h-8 cursor-pointer ${star <= reviewForm.rating ? 'fill-current' : 'fill-none stroke-current'}`} viewBox="0 0 24 24" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Review</label>
+                <textarea required rows={4} value={reviewForm.text} onChange={e => setReviewForm({...reviewForm, text: e.target.value})} className="w-full px-4 py-3 bg-neutral-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-black resize-none" placeholder="Tell us about your experience..." />
+              </div>
+              <button type="submit" className="mt-2 w-full py-4 bg-black text-white rounded-full font-bold hover:bg-neutral-800 transition-colors">Submit Review</button>
+            </form>
           </div>
         </div>
       )}
