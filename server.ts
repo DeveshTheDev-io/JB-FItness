@@ -100,18 +100,36 @@ async function startServer() {
 
   app.post("/api/ai/chat", async (req, res) => {
     try {
-      const { message, history, memberId } = req.body;
+      const { message, history, user } = req.body;
       
       const formattedHistory = history.map((msg: any) => ({
         role: msg.role,
         parts: [{ text: msg.text }]
       }));
       
-      // We use systemInstruction for the persona
+      let memberStatusText = "Guest (Not logged in or no active plan)";
+      let memberData = null;
+      
+      if (user && (user.email || user.username)) {
+        let query = supabase.from('members').select('*');
+        if (user.email) {
+          query = query.eq('email', user.email);
+        } else {
+          query = query.eq('name', user.username);
+        }
+        const { data, error } = await query.single();
+        if (data && data.status === 'Active' && data.plan) {
+          memberData = data;
+          memberStatusText = "Active Member (" + data.plan + " plan)";
+        }
+      }
+      
+      const systemInstruction = "You are a friendly, 24/7 AI gym receptionist and personal coach for JB Fitness named JB Fitness A.I. You understand and can reply fluently in both Hinglish (Hindi written in English alphabet) and English, depending on what language the user speaks. You can answer questions about website plans, community events, gym rules, class schedules (Yoga at 6 PM Tue/Thu, HIIT at 7 AM Mon/Wed), and general fitness advice. IMPORTANT RULE: Information specifically about diet and workouts MUST ONLY be given to members having an active plan purchased. Current User Status: " + memberStatusText + ". If the user's status is 'Guest' or 'Expired' and they ask for diet plans, workout routines, or specific exercise/diet advice, politely inform them that they need to purchase or renew a plan to access premium diet and workout features. You can still talk about general topics like gym timings, prices, and features. You have tools to check the user's workout history and book classes for them. Be concise, engaging, and helpful. Format your responses in a highly professional, well-structured manner using markdown bullet points, bold text for emphasis, and short paragraphs to make it easily readable.";
+
       const chat = ai.chats.create({
         model: "gemini-3.6-flash",
         config: {
-          systemInstruction: "You are a friendly, 24/7 AI gym receptionist and personal coach for JB Fitness. You can answer questions about gym rules, class schedules (Yoga at 6 PM Tue/Thu, HIIT at 7 AM Mon/Wed), and general fitness advice. You have tools to check the user's workout history and book classes for them. Be concise and helpful. When booking a class, confirm the booking with them.",
+          systemInstruction,
           tools: [{
             functionDeclarations: [
               {
@@ -148,27 +166,27 @@ async function startServer() {
         
         for (const call of calls) {
           if (call.name === "get_workout_history") {
-            if (memberId) {
-              const { data, error } = await supabase.from('workout_logs').select('*').eq('member_id', memberId).order('completed_at', { ascending: false }).limit(10);
+            if (memberData && memberData.id) {
+              const { data, error } = await supabase.from('workout_logs').select('*').eq('member_id', memberData.id).order('completed_at', { ascending: false }).limit(10);
               if (error) {
                 functionResponses.push({ name: call.name, response: { error: "Failed to fetch logs" } });
               } else {
                 functionResponses.push({ name: call.name, response: { logs: data } });
               }
             } else {
-               functionResponses.push({ name: call.name, response: { error: "User not logged in or memberId not provided." } });
+               functionResponses.push({ name: call.name, response: { error: "User not logged in or member doesn't exist." } });
             }
           } else if (call.name === "book_class") {
-            if (memberId) {
+            if (memberData && memberData.id) {
               const { class_name, booking_time } = call.args;
-              const { error } = await supabase.from('class_bookings').insert({ member_id: memberId, class_name, booking_time });
+              const { error } = await supabase.from('class_bookings').insert({ member_id: memberData.id, class_name, booking_time });
               if (error) {
                 functionResponses.push({ name: call.name, response: { success: false, error: error.message } });
               } else {
-                functionResponses.push({ name: call.name, response: { success: true, message: `Successfully booked ${class_name} at ${booking_time}` } });
+                functionResponses.push({ name: call.name, response: { success: true, message: "Successfully booked " + class_name + " at " + booking_time } });
               }
             } else {
-               functionResponses.push({ name: call.name, response: { success: false, error: "User not logged in." } });
+               functionResponses.push({ name: call.name, response: { success: false, error: "User not logged in or member doesn't exist." } });
             }
           }
         }

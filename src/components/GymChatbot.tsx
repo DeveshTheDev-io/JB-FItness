@@ -4,6 +4,7 @@ import { Dumbbell, X } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
+import Markdown from 'react-markdown';
 
 export default function GymChatbot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -32,7 +33,11 @@ export default function GymChatbot() {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: chatMessage, history: chatHistory })
+        body: JSON.stringify({ 
+          message: chatMessage, 
+          history: chatHistory, 
+          user: localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')!) : null
+        })
       });
       if (res.ok) {
         const data = await res.json();
@@ -65,7 +70,7 @@ export default function GymChatbot() {
                     <Dumbbell className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-bold">Gym A.I Chatbot</h3>
+                    <h3 className="font-bold">JB Fitness A.I</h3>
                     <p className="text-xs opacity-80">Ask about routines, diet, workouts</p>
                   </div>
                 </div>
@@ -83,7 +88,7 @@ export default function GymChatbot() {
                   chatHistory.map((msg, i) => (
                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-[var(--color-brand-primary)] text-black rounded-tr-sm font-semibold' : 'bg-white rounded-tl-sm shadow-sm font-medium border border-neutral-100'}`}>
-                        {msg.text}
+                        <div className="markdown-body space-y-2"><Markdown>{msg.text}</Markdown></div>
                       </div>
                     </div>
                   ))
