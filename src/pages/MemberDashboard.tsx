@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Activity, Calendar, Clock, CreditCard, Play, Plus, History, Users, Dumbbell, Wind, AlertCircle, ArrowLeft, ClipboardList, Bell, LineChart as LineChartIcon, TrendingUp, Award } from 'lucide-react';
+import {  Activity, Calendar, Clock, CreditCard, Play, Plus, History, Users, Dumbbell, Wind, AlertCircle, ArrowLeft, ClipboardList, Bell, LineChart as LineChartIcon, TrendingUp, Award , Lock, User, Camera } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -12,6 +12,7 @@ import { supabase } from "../lib/supabase";
 export default function MemberDashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('workout');
+
   const [selectedRoutine, setSelectedRoutine] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
 
@@ -39,7 +40,47 @@ export default function MemberDashboard() {
   const [myPlans, setMyPlans] = useState<any[]>([]);
   const [myAttendance, setMyAttendance] = useState<any[]>([]);
   const [myMessages, setMyMessages] = useState<any[]>([]);
-  const [memberInfo, setMemberInfo] = useState<any>(null);
+  const [workoutLogs, setWorkoutLogs] = useState<any[]>([]);
+  const [logForms, setLogForms] = useState<Record<number, {weight: string, reps: string}>>({});
+  const [isLoggingSet, setIsLoggingSet] = useState<number | null>(null);
+    const [memberInfo, setMemberInfo] = useState<any>(null);
+  
+  // Profile Settings State
+  const [profileForm, setProfileForm] = useState({ gender: '', phone: '', dob: '', address: '', photo_url: '' });
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // Custom Routines State
+  const [customRoutines, setCustomRoutines] = useState<any>({});
+  const [isCreatingRoutine, setIsCreatingRoutine] = useState(false);
+  const [newRoutine, setNewRoutine] = useState<any>({ title: '', desc: '', exercises: [] });
+  const [newExercise, setNewExercise] = useState({ name: '', sets: '', reps: '', posture: '', breathing: '' });
+
+  useEffect(() => {
+    if (memberInfo?.email) {
+      const saved = localStorage.getItem(`customRoutines_${memberInfo.email}`);
+      if (saved) setCustomRoutines(JSON.parse(saved));
+    }
+  }, [memberInfo]);
+
+
+  const currentPlan = myPlans.find(plan => new Date(plan.start_date) <= new Date() && new Date(plan.end_date) >= new Date());
+  const isPro = currentPlan?.plan_name?.includes('Pro');
+  const isElite = currentPlan?.plan_name?.includes('Elite');
+  const hasBasicAI = isPro || isElite;
+  const hasFullAI = isElite;
+
+  const getRequiredPlan = (tabId: string) => {
+    if (['aicoach', 'diettracker'].includes(tabId)) return 'Elite';
+    if (['formchecker', 'buddymatcher'].includes(tabId)) return 'Pro or Elite';
+    return 'Active Plan';
+  };
+
+  const isTabLocked = (tabId: string) => {
+    if (['aicoach', 'diettracker'].includes(tabId)) return !hasFullAI;
+    if (['formchecker', 'buddymatcher'].includes(tabId)) return !hasBasicAI;
+    return false;
+  };
+
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -63,14 +104,39 @@ export default function MemberDashboard() {
         
       if (messages) setMyMessages(messages);
 
-      const { data: member } = await supabase
+      let query = supabase
         .from('members')
-        .select('id, status, plan')
-        .eq('email', user.email)
-        .single();
+        .select('*');
+        
+      if (user.email && user.email.includes('@')) {
+        query = query.eq('email', user.email);
+      } else {
+        query = query.or(`name.eq.${user.username},email.eq.${user.username}`);
+      }
+      
+      let { data: membersList, error: fetchError } = await query.limit(1);
+      if (fetchError) console.error('Error fetching member:', fetchError);
+      
+      let member = membersList?.[0] || null;
+        
+      if (!member && supabase) {
+        // Auto-create member if not exists
+        const newMember = { 
+          name: user.username || user.email.split('@')[0], 
+          email: user.email, 
+          status: 'Active', 
+          plan: 'Basic',
+          gender: user.gender || 'Male'
+        };
+        const { data: createdMember } = await supabase.from('members').insert([newMember]).select().single();
+        if (createdMember) {
+          member = createdMember;
+        }
+      }
         
       if (member) {
         setMemberInfo(member);
+        setProfileForm({ gender: member.gender || '', phone: member.phone || '', dob: member.dob || '', address: member.address || '', photo_url: member.photo_url || '' });
         const { data: attendance } = await supabase
           .from('attendance')
           .select('*')
@@ -78,6 +144,14 @@ export default function MemberDashboard() {
           .order('check_in_time', { ascending: false });
         
         if (attendance) setMyAttendance(attendance);
+        
+        const { data: wLogs } = await supabase
+          .from('workout_logs')
+          .select('*')
+          .eq('member_id', member.id)
+          .order('completed_at', { ascending: false });
+        
+        if (wLogs) setWorkoutLogs(wLogs);
       }
     };
     fetchUserData();
@@ -143,7 +217,7 @@ export default function MemberDashboard() {
       if (currentUserStr) {
         const user = JSON.parse(currentUserStr);
         // Find member ID
-        const { data: memberData } = await supabase.from('members').select('id').eq('email', user.email).single();
+        const { data: memberData } = await supabase.from('members').select('id').or(`email.eq.${user.email},name.eq.${user.username || user.email}`).single();
         if (memberData) {
           await supabase.from('ai_plans').insert({ member_id: memberData.id, workout_plan: data.workoutPlan, diet_plan: data.dietPlan });
         }
@@ -189,6 +263,103 @@ export default function MemberDashboard() {
     }
   };
 
+
+  const handleSaveProfile = async () => {
+    if (!supabase) return;
+    if (!memberInfo?.id) {
+      alert('User profile not loaded correctly. Please try logging in again.');
+      return;
+    }
+    setIsSavingProfile(true);
+    try {
+      const { data: updatedData, error } = await supabase
+        .from('members')
+        .update({ 
+          gender: profileForm.gender, 
+          phone: profileForm.phone, 
+          dob: profileForm.dob, 
+          address: profileForm.address,
+          photo_url: profileForm.photo_url
+        })
+        .eq('id', memberInfo.id)
+        .select();
+        
+      if (error) throw error;
+      if (!updatedData || updatedData.length === 0) {
+        throw new Error('Could not update the database. Row Level Security (RLS) policies might be blocking the update, or the user ID was not found.');
+      }
+      
+      setMemberInfo({ ...memberInfo, ...profileForm });
+      
+      const currentUserStr = localStorage.getItem('currentUser');
+      if (currentUserStr) {
+        const user = JSON.parse(currentUserStr);
+        user.gender = profileForm.gender;
+        localStorage.setItem('currentUser', JSON.stringify(user));
+      }
+      
+      alert('Profile updated successfully!');
+    } catch (e: any) {
+      alert(e.message || 'Failed to update profile');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  
+  const handleLogSet = async (ex: any, idx: number) => {
+    if (!supabase || !memberInfo) return;
+    const logData = logForms[idx];
+    if (!logData?.weight || !logData?.reps) {
+      alert("Please enter weight and reps");
+      return;
+    }
+    
+    setIsLoggingSet(idx);
+    
+    try {
+      const newLog = {
+        member_id: memberInfo.id,
+        exercise_name: ex.name,
+        weight: parseFloat(logData.weight),
+        reps: parseInt(logData.reps, 10)
+      };
+      
+      const { data, error } = await supabase
+        .from('workout_logs')
+        .insert([newLog])
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      if (data) {
+        setWorkoutLogs(prev => [data, ...prev]);
+        setLogForms(prev => {
+          const newState = { ...prev };
+          delete newState[idx];
+          return newState;
+        });
+        alert('Set logged successfully!');
+      }
+    } catch (e: any) {
+      alert('Failed to log set: ' + (e.message || 'Unknown error'));
+    } finally {
+      setIsLoggingSet(null);
+    }
+  };
+
+const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileForm({ ...profileForm, photo_url: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[var(--color-neu-base)] flex flex-col md:flex-row">
       {/* Sidebar */}
@@ -219,6 +390,7 @@ export default function MemberDashboard() {
             { id: 'buddymatcher', icon: Users, label: 'Buddy Matcher' },
             { id: 'achievements', icon: Activity, label: 'Achievements' },
             { id: 'classes', icon: Calendar, label: 'Book Classes' },
+            { id: 'profile', icon: User, label: 'Profile Settings' },
             { id: 'subscription', icon: CreditCard, label: 'Subscription' },
             { id: 'logout', icon: ArrowLeft, label: 'Log Out' },
           ].map((tab) => (
@@ -242,13 +414,33 @@ export default function MemberDashboard() {
                 }
               }}
             >
-              <tab.icon className="w-5 h-5" />
-              {tab.label}
+              <tab.icon className="w-5 h-5 shrink-0" />
+              <span className="flex-1 flex items-center justify-between min-w-0">
+                <span className="truncate">{tab.label}</span>
+                {isTabLocked(tab.id) && <Lock className="w-4 h-4 text-neutral-400 ml-2 shrink-0" />}
+              </span>
             </Button>
           ))}
         </nav>
 
+        
+        {/* User Profile Card */}
+        <Card variant="flat" className="hidden md:flex items-center gap-4 p-4 mt-auto">
+          <div className="w-12 h-12 bg-neutral-200 rounded-full flex items-center justify-center overflow-hidden border-2 border-white shadow-sm shrink-0">
+            {memberInfo?.photo_url ? (
+              <img src={memberInfo.photo_url} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <User className="w-6 h-6 text-neutral-400" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="font-bold truncate">{memberInfo?.name || (localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')!).username : 'User')}</p>
+            <p className="text-xs opacity-70 truncate">{memberInfo?.email || (localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')!).email : '')}</p>
+          </div>
+        </Card>
+
         {/* Mini Subscription Status */}
+
         <Card variant="pressed" className="mt-auto hidden md:block">
           <h4 className="text-sm font-bold mb-2">Membership Status</h4>
           <p className="text-2xl font-black text-[var(--color-brand-primary)]">{memberInfo?.plan || 'None'}</p>
@@ -263,7 +455,7 @@ export default function MemberDashboard() {
         </Card>
       </motion.aside>
 
-      {/* Main Content */}
+            {/* Main Content */}
       <main className="flex-1 p-6 overflow-y-auto">
         <motion.div
           key={activeTab}
@@ -272,7 +464,18 @@ export default function MemberDashboard() {
           transition={{ duration: 0.3 }}
           className="max-w-4xl mx-auto space-y-8"
         >
-          {activeTab === 'progress' && (
+          {isTabLocked(activeTab) ? (
+            <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+              <Lock className="w-20 h-20 text-[var(--color-brand-primary)] mb-6 opacity-80" />
+              <h2 className="text-3xl font-black mb-4">Feature Locked</h2>
+              <p className="text-lg opacity-70 mb-8 max-w-md mx-auto">
+                This feature requires the <strong>{getRequiredPlan(activeTab)}</strong> plan. Upgrade your subscription to unlock it.
+              </p>
+              <Button variant="primary" className="px-8 py-3" onClick={() => window.location.href = '/#plans'}>Upgrade Plan</Button>
+            </div>
+          ) : (
+            <>
+              {activeTab === 'progress' && (
             <>
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-3xl font-black tracking-tight">Progress Tracking</h2>
@@ -448,20 +651,127 @@ export default function MemberDashboard() {
 
           {activeTab === 'workout' && (
             <>
-              <div className="flex justify-between items-center">
+                            <div className="flex justify-between items-center">
                 <h2 className="text-3xl font-black tracking-tight">Workout Programs</h2>
-                <p className="font-medium opacity-70">{new Date().toLocaleDateString()}</p>
+                <div className="flex items-center gap-4">
+                  <Button variant="secondary" onClick={() => setIsCreatingRoutine(true)}>
+                    <Plus className="w-5 h-5 mr-2" /> Create Custom
+                  </Button>
+                  <p className="font-medium opacity-70">{new Date().toLocaleDateString()}</p>
+                </div>
               </div>
 
-              {!selectedRoutine ? (
+              {isCreatingRoutine ? (
+                <Card variant="flat" className="mt-8 p-8">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-2xl font-bold">Create Custom Routine</h3>
+                    <Button variant="ghost" onClick={() => setIsCreatingRoutine(false)}>Cancel</Button>
+                  </div>
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-bold opacity-70 mb-2">Routine Title</label>
+                      <Input 
+                        placeholder="e.g., Leg Day Crusher" 
+                        value={newRoutine.title}
+                        onChange={e => setNewRoutine({ ...newRoutine, title: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold opacity-70 mb-2">Description</label>
+                      <Input 
+                        placeholder="Short description of the routine" 
+                        value={newRoutine.desc}
+                        onChange={e => setNewRoutine({ ...newRoutine, desc: e.target.value })}
+                      />
+                    </div>
+                    
+                    <div className="pt-4 border-t border-neutral-100">
+                      <h4 className="text-lg font-bold mb-4">Add Exercises</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <Input placeholder="Exercise Name" value={newExercise.name} onChange={e => setNewExercise({ ...newExercise, name: e.target.value })} />
+                        <Input placeholder="Sets (e.g., 4)" value={newExercise.sets} onChange={e => setNewExercise({ ...newExercise, sets: e.target.value })} />
+                        <Input placeholder="Reps (e.g., 8-12)" value={newExercise.reps} onChange={e => setNewExercise({ ...newExercise, reps: e.target.value })} />
+                        <Input className="md:col-span-3" placeholder="Posture / Instructions" value={newExercise.posture} onChange={e => setNewExercise({ ...newExercise, posture: e.target.value })} />
+                        <Input className="md:col-span-3" placeholder="Breathing Instructions" value={newExercise.breathing} onChange={e => setNewExercise({ ...newExercise, breathing: e.target.value })} />
+                      </div>
+                      <Button 
+                        variant="secondary" 
+                        onClick={() => {
+                          if (newExercise.name) {
+                            setNewRoutine({ ...newRoutine, exercises: [...newRoutine.exercises, newExercise] });
+                            setNewExercise({ name: '', sets: '', reps: '', posture: '', breathing: '' });
+                          }
+                        }}
+                      >
+                        Add Exercise
+                      </Button>
+                    </div>
+
+                    {newRoutine.exercises.length > 0 && (
+                      <div className="space-y-2 mt-4">
+                        <h4 className="font-bold opacity-70">Added Exercises:</h4>
+                        {newRoutine.exercises.map((ex: any, idx: number) => (
+                          <div key={idx} className="flex justify-between p-3 neu-flat rounded-lg">
+                            <span>{ex.name}</span>
+                            <span className="opacity-70">{ex.sets} sets x {ex.reps}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="pt-6">
+                      <Button 
+                        variant="primary" 
+                        className="w-full"
+                        onClick={() => {
+                          if (!newRoutine.title || newRoutine.exercises.length === 0) {
+                            alert('Please enter a title and add at least one exercise.');
+                            return;
+                          }
+                          const key = 'custom_' + Date.now();
+                          const updatedCustom = { ...customRoutines, [key]: newRoutine };
+                          setCustomRoutines(updatedCustom);
+                          if (memberInfo?.email) {
+                            localStorage.setItem(`customRoutines_${memberInfo.email}`, JSON.stringify(updatedCustom));
+                          }
+                          setIsCreatingRoutine(false);
+                          setNewRoutine({ title: '', desc: '', exercises: [] });
+                        }}
+                      >
+                        Save Routine
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ) : !selectedRoutine ? (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-                    {Object.entries(routines).map(([key, routine]) => {
-                      const Icon = routine.icon;
+                    {Object.entries({ ...routines, ...customRoutines }).filter(([key]) => {
+                      if (key.startsWith('custom_')) return true;
+                      const userGenderRaw = memberInfo?.gender || (localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')!).gender : null);
+                      const userGender = userGenderRaw ? String(userGenderRaw).trim().toLowerCase() : 'male';
+                      if (userGender === 'male') return key.startsWith('mens');
+                      if (userGender === 'female') return key.startsWith('womens');
+                      return true;
+                    }).map(([key, routine]: [string, any]) => {
+                      const Icon = routine.icon || Dumbbell;
                       return (
                         <Card key={key} className="flex flex-col p-8 hover:-translate-y-1 transition-transform cursor-pointer" onClick={() => setSelectedRoutine(key)}>
-                          <div className="neu-pressed w-16 h-16 rounded-full flex items-center justify-center mb-6">
-                            <Icon className="w-8 h-8 text-[var(--color-brand-primary)]" />
+                          <div className="flex justify-between items-start mb-6">
+                            <div className="neu-pressed w-16 h-16 rounded-full flex items-center justify-center">
+                              <Icon className="w-8 h-8 text-[var(--color-brand-primary)]" />
+                            </div>
+                            {key.startsWith('custom_') && (
+                              <Button variant="ghost" onClick={(e) => {
+                                e.stopPropagation();
+                                const newCustoms = { ...customRoutines };
+                                delete newCustoms[key];
+                                setCustomRoutines(newCustoms);
+                                if (memberInfo?.email) {
+                                  localStorage.setItem(`customRoutines_${memberInfo.email}`, JSON.stringify(newCustoms));
+                                }
+                              }}>Delete</Button>
+                            )}
                           </div>
                           <h3 className="text-2xl font-bold mb-2">{routine.title}</h3>
                           <p className="opacity-70 mb-6">{routine.desc}</p>
@@ -476,32 +786,30 @@ export default function MemberDashboard() {
                       <History className="w-5 h-5 text-[var(--color-brand-primary)]" /> Recent Activity
                     </h3>
                     <div className="space-y-4">
-                      {[
-                        { name: 'Squats', weight: '100kg', reps: 8, time: '10:45 AM' },
-                        { name: 'Deadlift', weight: '140kg', reps: 5, time: '11:10 AM' },
-                        { name: 'Pull-ups', weight: 'Body', reps: 12, time: '11:30 AM' },
-                      ].map((log, i) => (
+                      {workoutLogs.length === 0 ? (
+                        <div className="text-center opacity-70 p-4">No recent activity</div>
+                      ) : workoutLogs.slice(0, 5).map((log, i) => (
                         <div key={i} className="flex justify-between items-center p-4 neu-flat rounded-xl">
                           <div>
-                            <p className="font-bold">{log.name}</p>
-                            <p className="text-sm opacity-70">{log.time}</p>
+                            <p className="font-bold">{log.exercise_name}</p>
+                            <p className="text-sm opacity-70">{new Date(log.completed_at).toLocaleDateString()} {new Date(log.completed_at).toLocaleTimeString()}</p>
                           </div>
                           <div className="text-right">
-                            <p className="font-bold">{log.weight} × {log.reps}</p>
+                            <p className="font-bold">{log.weight}kg × {log.reps}</p>
                           </div>
                         </div>
                       ))}
                     </div>
                   </Card>
                 </>
-              ) : (
+                            ) : (
                 <div className="space-y-6">
                   <Button variant="icon" className="mb-4" onClick={() => setSelectedRoutine(null)}>
                     <ArrowLeft className="w-5 h-5" />
                   </Button>
-                  <h3 className="text-2xl font-black mb-6">{routines[selectedRoutine as keyof typeof routines].title}</h3>
+                  <h3 className="text-2xl font-black mb-6">{({ ...routines, ...customRoutines })[selectedRoutine]?.title}</h3>
                   
-                  {routines[selectedRoutine as keyof typeof routines].exercises.map((ex, idx) => (
+                  {({ ...routines, ...customRoutines })[selectedRoutine]?.exercises?.map((ex: any, idx: number) => (
                     <Card key={idx} className="flex flex-col md:flex-row gap-6 items-start">
                       <div className="flex-1 space-y-4">
                         <h4 className="text-xl font-bold text-[var(--color-brand-primary)]">{ex.name}</h4>
@@ -527,9 +835,26 @@ export default function MemberDashboard() {
                           <span className="font-bold text-sm">{ex.sets} Sets × {ex.reps} Reps</span>
                         </div>
                         <div className="space-y-3">
-                          <Input placeholder="Weight (kg)" type="number" />
-                          <Input placeholder="Reps Done" type="number" />
-                          <Button variant="primary" className="w-full">Log Set</Button>
+                          <Input 
+                            placeholder="Weight (kg)" 
+                            type="number" 
+                            value={logForms[idx]?.weight || ''}
+                            onChange={(e) => setLogForms({...logForms, [idx]: {...(logForms[idx] || {reps: ''}), weight: e.target.value}})}
+                          />
+                          <Input 
+                            placeholder="Reps Done" 
+                            type="number" 
+                            value={logForms[idx]?.reps || ''}
+                            onChange={(e) => setLogForms({...logForms, [idx]: {...(logForms[idx] || {weight: ''}), reps: e.target.value}})}
+                          />
+                          <Button 
+                            variant="primary" 
+                            className="w-full"
+                            onClick={() => handleLogSet(ex, idx)}
+                            disabled={isLoggingSet === idx}
+                          >
+                            {isLoggingSet === idx ? 'Logging...' : 'Log Set'}
+                          </Button>
                         </div>
                       </div>
                     </Card>
@@ -793,31 +1118,115 @@ export default function MemberDashboard() {
             </div>
           )}
 
+                    {activeTab === 'profile' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-3xl font-black tracking-tight mb-2">Profile Settings</h2>
+                <p className="text-neutral-500">Manage your personal information and preferences.</p>
+              </div>
+              <Card className="max-w-2xl p-6">
+                <form onSubmit={(e) => { e.preventDefault(); handleSaveProfile(); }} className="space-y-6">
+                  <div className="flex flex-col items-center mb-8">
+                    <div className="relative group">
+                      <div className="w-32 h-32 rounded-full overflow-hidden bg-neutral-200 flex items-center justify-center border-4 border-white shadow-lg">
+                        {profileForm.photo_url ? (
+                          <img src={profileForm.photo_url} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                          <User className="w-16 h-16 text-neutral-400" />
+                        )}
+                      </div>
+                      <label className="absolute bottom-0 right-0 p-3 bg-black text-white rounded-full cursor-pointer hover:bg-neutral-800 transition-colors shadow-lg">
+                        <Camera className="w-5 h-5" />
+                        <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-bold opacity-70 mb-2 uppercase tracking-widest">Gender</label>
+                      <select 
+                        value={profileForm.gender} 
+                        onChange={e => setProfileForm({ ...profileForm, gender: e.target.value })}
+                        className="w-full p-3 rounded-xl border border-neutral-200 bg-white focus:outline-none focus:ring-2 focus:ring-black/5"
+                      >
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold opacity-70 mb-2 uppercase tracking-widest">Date of Birth</label>
+                      <Input 
+                        type="date" 
+                        value={profileForm.dob} 
+                        onChange={e => setProfileForm({ ...profileForm, dob: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold opacity-70 mb-2 uppercase tracking-widest">Phone Number</label>
+                      <Input 
+                        placeholder="+91 9876543210" 
+                        value={profileForm.phone} 
+                        onChange={e => setProfileForm({ ...profileForm, phone: e.target.value })}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-bold opacity-70 mb-2 uppercase tracking-widest">Address</label>
+                      <textarea 
+                        className="w-full p-4 rounded-xl border border-neutral-200 bg-white focus:outline-none focus:ring-2 focus:ring-black/5 resize-none h-24"
+                        placeholder="Enter your full address"
+                        value={profileForm.address}
+                        onChange={e => setProfileForm({ ...profileForm, address: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-6 border-t border-neutral-100 flex justify-end">
+                    <Button type="submit" variant="primary" className="px-8 py-3" disabled={isSavingProfile}>
+                      {isSavingProfile ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                  </div>
+                </form>
+              </Card>
+            </div>
+          )}
           {activeTab === 'subscription' && (
             <>
               <h2 className="text-3xl font-black tracking-tight mb-8">Your Subscription</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <Card variant="convex" className="border-t-4 border-[var(--color-brand-primary)]">
                   <h3 className="text-xl font-bold mb-2">Current Plan</h3>
-                  <div className="text-4xl font-black text-[var(--color-brand-primary)] mb-4">Pro Tier</div>
-                  <p className="mb-6 opacity-70">Access to all equipment, 3 classes/week, locker room.</p>
-                  <div className="neu-pressed p-4 rounded-xl flex justify-between items-center mb-6">
-                    <span className="font-medium">Status</span>
-                    <span className="text-green-500 font-bold">Active</span>
-                  </div>
-                  <div className="neu-pressed p-4 rounded-xl flex justify-between items-center">
-                    <span className="font-medium">Valid Until</span>
-                    <span className="font-bold">July 28, 2026</span>
-                  </div>
+                  {currentPlan ? (
+                    <>
+                      <div className="text-4xl font-black text-[var(--color-brand-primary)] mb-4">{currentPlan.plan_name}</div>
+                      <p className="mb-6 opacity-70">Access to facilities based on your plan tier.</p>
+                      <div className="neu-pressed p-4 rounded-xl flex justify-between items-center mb-6">
+                        <span className="font-medium">Status</span>
+                        <span className="text-green-500 font-bold">Active</span>
+                      </div>
+                      <div className="neu-pressed p-4 rounded-xl flex justify-between items-center">
+                        <span className="font-medium">Valid Until</span>
+                        <span className="font-bold">{new Date(currentPlan.end_date).toLocaleDateString()}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-4xl font-black text-neutral-500 mb-4">No Active Plan</div>
+                      <p className="mb-6 opacity-70">You currently do not have an active membership plan.</p>
+                    </>
+                  )}
                 </Card>
-
                 <Card className="flex flex-col justify-center items-center text-center">
                   <CreditCard className="w-16 h-16 text-[var(--color-brand-primary)] mb-4" />
-                  <h3 className="text-2xl font-bold mb-2">Renewal Due Soon</h3>
-                  <p className="opacity-70 mb-8">Your plan expires in 5 days. Renew now to avoid interruption.</p>
-                  <Button variant="primary" className="w-full text-lg py-4">Pay ₹2,499 Now</Button>
+                  <h3 className="text-2xl font-bold mb-2">{currentPlan ? 'Renew Your Plan' : 'Purchase a Plan'}</h3>
+                  <p className="opacity-70 mb-8">{currentPlan ? 'Extend your membership to avoid interruption.' : 'Get access to our facilities and features by purchasing a plan.'}</p>
+                  <Button variant="primary" className="w-full text-lg py-4" onClick={() => window.location.href = '/#plans'}>View Plans</Button>
                 </Card>
               </div>
+            </>
+          )}
             </>
           )}
         </motion.div>

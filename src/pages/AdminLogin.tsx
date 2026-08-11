@@ -17,6 +17,7 @@ export default function AdminLogin() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
+  const [gender, setGender] = useState('Male');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -37,9 +38,27 @@ export default function AdminLogin() {
       if ((username === 'admin' || username === '12345') && password === 'admin123') {
         localStorage.setItem('currentUser', JSON.stringify({ role: 'admin', username }));
         navigate('/admin');
-      } else if (username && password) {
-        localStorage.setItem('currentUser', JSON.stringify({ role: 'member', username }));
+            } else if (username && password) {
+        if (supabase) {
+          let query = supabase.from('members').select('*');
+          if (username.includes('@')) {
+            query = query.eq('email', username);
+          } else {
+            query = query.or(`name.eq.${username},email.eq.${username}`);
+          }
+          const { data: memberDataList } = await query.limit(1);
+          const memberData = memberDataList?.[0] || null;
+            
+          if (memberData) {
+            localStorage.setItem('currentUser', JSON.stringify({ role: 'member', username: memberData.name, email: memberData.email, gender: memberData.gender }));
+            navigate('/member');
+            return;
+          }
+        }
+        // Fallback for mock login if DB fails or user not found but we still want to allow login for testing
+        localStorage.setItem('currentUser', JSON.stringify({ role: 'member', username, email: username.includes('@') ? username : `${username}@example.com` }));
         navigate('/member');
+
       } else {
         setError('Please enter username and password');
       }
@@ -48,14 +67,14 @@ export default function AdminLogin() {
         if (supabase) {
           const { error: dbError } = await supabase
             .from('members')
-            .insert([{ name: username, email: email, plan: 'Basic', status: 'Active' }]);
+            .insert([{ name: username, email: email, plan: 'Basic', status: 'Active', gender: gender }]);
           if (dbError) {
             console.error('Failed to create member', dbError);
             setError(dbError.message || 'Failed to create member account');
             return;
           }
         }
-        localStorage.setItem('currentUser', JSON.stringify({ role: 'member', username, email }));
+        localStorage.setItem('currentUser', JSON.stringify({ role: 'member', username, email, gender }));
         navigate('/member');
       } else {
         setError('Please fill in all fields to sign up');
@@ -116,6 +135,15 @@ export default function AdminLogin() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
+              </motion.div>
+            )}
+            {mode === 'signup' && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mb-6">
+                <label className="block text-sm font-bold mb-2 ml-2 opacity-70 uppercase tracking-widest">Gender</label>
+                <div className="flex gap-4">
+                  <Button type="button" variant={gender === 'Male' ? 'primary' : 'default'} onClick={() => setGender('Male')} className="flex-1 py-3">Male</Button>
+                  <Button type="button" variant={gender === 'Female' ? 'primary' : 'default'} onClick={() => setGender('Female')} className="flex-1 py-3">Female</Button>
+                </div>
               </motion.div>
             )}
 
