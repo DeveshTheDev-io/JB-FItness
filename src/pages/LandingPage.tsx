@@ -203,14 +203,14 @@ function Navbar() {
             <Dumbbell className="w-5 h-5 md:w-6 md:h-6 text-[var(--color-brand-primary)]" />
             <div className="flex flex-col">
               <span className="text-xl md:text-2xl font-black uppercase leading-none text-black">JAI BALAJI</span>
-              <span className="text-[9px] md:text-[10px] font-bold leading-none mt-1 tracking-[0.2em] uppercase text-[var(--color-brand-primary)]">Elite Fitness</span>
+              <span className="text-[9px] md:text-[10px] font-bold leading-none mt-1 tracking-[0.2em] uppercase text-[var(--color-brand-primary)]">Fitness</span>
             </div>
           </div>
         </div>
         
         <div className="hidden lg:flex items-center gap-8">
-          {['Home', 'Plans', 'Coaches', 'Community', 'Contact'].map((item) => (
-            <button key={item} onClick={() => item === 'Community' ? navigate('/community') : handleScroll(item.toLowerCase())} className="text-sm font-bold text-black hover:opacity-70 transition-opacity uppercase">{item}</button>
+          {['Home', 'About Us', 'Plans', 'Coaches', 'Community', 'Contact'].map((item) => (
+            <button key={item} onClick={() => item === 'Community' ? navigate('/community') : item === 'About Us' ? navigate('/about') : handleScroll(item.toLowerCase())} className="text-sm font-bold text-black hover:opacity-70 transition-opacity uppercase">{item}</button>
           ))}
         </div>
 
@@ -241,8 +241,8 @@ function Navbar() {
       <div className={`fixed inset-0 z-40 lg:hidden ${open ? 'pointer-events-auto' : 'pointer-events-none'}`}>
         <div className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-500 ${open ? 'opacity-100' : 'opacity-0'}`} onClick={() => setOpen(false)} />
         <div className={`absolute top-0 right-0 h-full w-[85%] max-w-sm bg-white shadow-2xl flex flex-col justify-center px-8 gap-1 transition-transform duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] ${open ? 'translate-x-0' : 'translate-x-full'}`}>
-          {['Home', 'Plans', 'Coaches', 'Community', 'Contact'].map((item, i) => (
-            <button key={item} onClick={() => { setOpen(false); item === 'Community' ? navigate('/community') : handleScroll(item.toLowerCase()); }} className="text-4xl font-bold text-black hover:text-neutral-500 transition-all duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] text-left" style={{ opacity: open ? 1 : 0, transform: open ? 'translateX(0)' : 'translateX(32px)', transitionDelay: `${100 + i * 60}ms` }}>
+          {['Home', 'About Us', 'Plans', 'Coaches', 'Community', 'Contact'].map((item, i) => (
+            <button key={item} onClick={() => { setOpen(false); item === 'Community' ? navigate('/community') : item === 'About Us' ? navigate('/about') : handleScroll(item.toLowerCase()); }} className="text-4xl font-bold text-black hover:text-neutral-500 transition-all duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] text-left" style={{ opacity: open ? 1 : 0, transform: open ? 'translateX(0)' : 'translateX(32px)', transitionDelay: `${100 + i * 60}ms` }}>
               {item}
             </button>
           ))}
@@ -282,14 +282,14 @@ export default function LandingPage() {
 
   const [reviews, setReviews] = useState<any[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
-  const [reviewForm, setReviewForm] = useState({ name: '', gender: 'Male', status: 'Member', rating: 5, text: '' });
+  const [reviewForm, setReviewForm] = useState({ name: '', gender: 'Male', gym_status: 'Member', rating: 5, review_text: '' });
 
   const [user, setUser] = useState<{role: string} | null>(null);
   useEffect(() => {
     const fetchReviews = async () => {
       if (!supabase) return;
       try {
-        const { data } = await supabase.from('reviews').select('*').order('created_at', { ascending: false });
+        const { data } = await supabase.from('gym_reviews').select('*').order('created_at', { ascending: false });
         if (data) setReviews(data);
       } catch (e) {}
     };
@@ -307,7 +307,7 @@ export default function LandingPage() {
     e.preventDefault();
     if (supabase) {
       try {
-        const { data } = await supabase.from('reviews').insert([{ ...reviewForm }]).select();
+        const { data } = await supabase.from('gym_reviews').insert([{ ...reviewForm }]).select();
         if (data) {
           setReviews([data[0], ...reviews]);
         }
@@ -316,7 +316,7 @@ export default function LandingPage() {
       setReviews([{ ...reviewForm, id: Math.random(), created_at: new Date().toISOString() }, ...reviews]);
     }
     setShowReviewModal(false);
-    setReviewForm({ name: '', gender: 'Male', status: 'Member', rating: 5, text: '' });
+    setReviewForm({ name: '', gender: 'Male', gym_status: 'Member', rating: 5, review_text: '' });
   };
 
   const handleAuthClick = (mode: 'signin' | 'signup') => {
@@ -732,75 +732,147 @@ export default function LandingPage() {
         </div>
       </section>
 
+      
       {/* Community Section */}
-      <section className="w-full flex flex-col pt-1.5 md:pt-2 px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2">
-        <div className="rounded-xl md:rounded-2xl bg-black p-6 md:p-10 lg:p-16 text-center flex flex-col items-center relative">
+      <section className="w-full flex flex-col pt-1.5 md:pt-2 px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2 overflow-hidden">
+        <div className="rounded-xl md:rounded-2xl bg-black py-10 md:py-16 text-center flex flex-col items-center relative overflow-hidden">
           <p className="text-sm font-bold uppercase tracking-widest text-[var(--color-brand-primary)] mb-4">Reviews</p>
           <h2 className="text-[clamp(2.5rem,5vw,4rem)] font-black text-white leading-[0.9] mb-12">What Our<br/>Members Say</h2>
           
-          <button onClick={() => setShowReviewModal(true)} className="absolute top-6 right-6 md:top-10 md:right-10 px-5 py-2.5 bg-white text-black font-bold rounded-full text-sm hover:scale-105 transition-transform">
+          <button onClick={() => setShowReviewModal(true)} className="absolute top-6 right-6 md:top-10 md:right-10 px-5 py-2.5 bg-white text-black font-bold rounded-full text-sm hover:scale-105 transition-transform z-10">
             Share Your Experience
           </button>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 w-full max-w-6xl">
-            {(reviews.length > 0 ? reviews : [
-              {
-                name: "Arjun Verma",
-                role: "Powerlifter",
-                text: "The equipment at Jai Balaji is unmatched. The environment pushes you to your absolute limits.",
-                status: "Member",
-                rating: 5
-              },
-              {
-                name: "Priya Sharma",
-                role: "Fitness Enthusiast",
-                text: "Love the AI features! The smart planner completely changed my workout routine.",
-                status: "Member",
-                rating: 5
-              },
-              {
-                name: "Vikas Patel",
-                role: "CrossFit Athlete",
-                text: "The community here is incredible. Professional coaches and state-of-the-art facilities.",
-                status: "Past Member",
-                rating: 5
-              }
-            ]).map((review, i) => (
-              <div key={i} className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 md:p-8 text-left hover:border-neutral-700 transition-colors">
-                <div className="flex text-[var(--color-brand-primary)] mb-4">
-                  {[...Array(review.rating || 5)].map((_, j) => (
-                    <svg key={j} width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                  ))}
-                </div>
-                <p className="text-white/80 font-medium mb-6 text-sm md:text-base leading-relaxed">"{review.text}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center text-white font-bold group relative cursor-pointer">
-                    {review.name.charAt(0)}
-                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 border border-neutral-700">
-                      {review.status || 'Member'} • {review.gender || 'Not specified'}
+          <div className="w-full overflow-hidden relative">
+            <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-black to-transparent z-10 pointer-events-none"></div>
+            <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-black to-transparent z-10 pointer-events-none"></div>
+            
+            <div className="animate-marquee flex gap-6 px-6">
+              {[...(reviews.length > 0 ? reviews : [
+                {
+                  name: "Arjun Verma",
+                  gym_status: "Member",
+                  review_text: "The equipment at Jai Balaji is unmatched. The environment pushes you to your absolute limits. Best gym in town without a doubt.",
+                  rating: 5
+                },
+                {
+                  name: "Priya Sharma",
+                  gym_status: "Member",
+                  review_text: "Love the AI features! The smart planner completely changed my workout routine. Seeing progress faster than ever.",
+                  rating: 5
+                },
+                {
+                  name: "Vikas Patel",
+                  gym_status: "Past Member",
+                  review_text: "The community here is incredible. Professional coaches and state-of-the-art facilities. Wish I hadn't moved out of town!",
+                  rating: 4
+                },
+                {
+                  name: "Neha Gupta",
+                  gym_status: "Member",
+                  review_text: "Best gym experience I've had. The smart AI diet recommendations are spot on and super easy to follow.",
+                  rating: 5
+                },
+                {
+                  name: "Karan Singh",
+                  gym_status: "Member",
+                  review_text: "I booked a few personal training sessions with Sushant. My deadlift has gone up 30kg in a month. Incredible coaching.",
+                  rating: 5
+                },
+                {
+                  name: "Sanya Malhotra",
+                  gym_status: "Member",
+                  review_text: "The functional training area is spacious and well-equipped. Nidhi's classes are tough but totally worth it.",
+                  rating: 5
+                },
+                {
+                  name: "Rahul Desai",
+                  gym_status: "Non-Member",
+                  review_text: "Did a trial day yesterday. The facility is extremely clean and the staff is super welcoming. Definitely signing up.",
+                  rating: 4
+                },
+                {
+                  name: "Amit Kumar",
+                  gym_status: "Member",
+                  review_text: "Value for money is incredible. The 12-month Pro plan with AI tracking is a steal for the results I'm getting.",
+                  rating: 5
+                }
+              ]), ...(reviews.length > 0 ? reviews : [
+                {
+                  name: "Arjun Verma",
+                  gym_status: "Member",
+                  review_text: "The equipment at Jai Balaji is unmatched. The environment pushes you to your absolute limits. Best gym in town without a doubt.",
+                  rating: 5
+                },
+                {
+                  name: "Priya Sharma",
+                  gym_status: "Member",
+                  review_text: "Love the AI features! The smart planner completely changed my workout routine. Seeing progress faster than ever.",
+                  rating: 5
+                },
+                {
+                  name: "Vikas Patel",
+                  gym_status: "Past Member",
+                  review_text: "The community here is incredible. Professional coaches and state-of-the-art facilities. Wish I hadn't moved out of town!",
+                  rating: 4
+                },
+                {
+                  name: "Neha Gupta",
+                  gym_status: "Member",
+                  review_text: "Best gym experience I've had. The smart AI diet recommendations are spot on and super easy to follow.",
+                  rating: 5
+                },
+                {
+                  name: "Karan Singh",
+                  gym_status: "Member",
+                  review_text: "I booked a few personal training sessions with Sushant. My deadlift has gone up 30kg in a month. Incredible coaching.",
+                  rating: 5
+                },
+                {
+                  name: "Sanya Malhotra",
+                  gym_status: "Member",
+                  review_text: "The functional training area is spacious and well-equipped. Nidhi's classes are tough but totally worth it.",
+                  rating: 5
+                },
+                {
+                  name: "Rahul Desai",
+                  gym_status: "Non-Member",
+                  review_text: "Did a trial day yesterday. The facility is extremely clean and the staff is super welcoming. Definitely signing up.",
+                  rating: 4
+                },
+                {
+                  name: "Amit Kumar",
+                  gym_status: "Member",
+                  review_text: "Value for money is incredible. The 12-month Pro plan with AI tracking is a steal for the results I'm getting.",
+                  rating: 5
+                }
+              ])].map((review, i) => (
+                <div key={i} className="flex-shrink-0 w-80 md:w-96 rounded-xl md:rounded-2xl bg-white/5 border border-white/10 p-6 md:p-8 text-left hover:bg-white/10 transition-colors">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h4 className="font-bold text-white text-lg">{review.name}</h4>
+                      <p className="text-sm text-[var(--color-brand-primary)] font-medium">{(review.gym_status || review.status) || review.role}</p>
+                    </div>
+                    <div className="flex text-yellow-500">
+                      {[...Array(review.rating || 5)].map((_, j) => (
+                        <svg key={j} className="w-4 h-4 fill-current" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                      ))}
                     </div>
                   </div>
-                  <div>
-                    <h4 className="text-white font-bold text-sm cursor-pointer group relative">
-                      {review.name}
-                      <div className="absolute -top-10 left-0 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 border border-neutral-700">
-                        {review.status || 'Member'} • {review.gender || 'Not specified'}
-                      </div>
-                    </h4>
-                    <p className="text-neutral-500 font-semibold text-xs">{review.role || review.status || 'Member'}</p>
-                  </div>
+                  <p className="text-stone-300 text-sm leading-relaxed">"{(review.review_text || review.text)}"</p>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>
+
 
       {/* Footer / Contact */}
       <footer id="contact" className="w-full px-3 md:px-5 pb-3">
         <div className="rounded-xl md:rounded-2xl bg-black p-8 md:p-16 flex flex-col md:flex-row justify-between text-white gap-10">
           <div>
-            <h2 className="text-3xl font-black mb-4">JAI BALAJI ELITE FITNESS</h2>
+            <h2 className="text-3xl font-black mb-4">JAI BALAJI FITNESS</h2>
             <p className="text-sm font-semibold opacity-70 max-w-xs mb-4">Elevating fitness standards with elite equipment and professional coaching.</p>
             <p className="text-sm font-bold text-neutral-400">
               Powered by <a href="https://dev-ai-agency.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-[var(--color-brand-primary)] hover:underline hover:opacity-80 transition-all">Devscosmic A.I Agency</a>
@@ -977,7 +1049,7 @@ export default function LandingPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-bold mb-1">Gym Status</label>
-                  <select value={reviewForm.status} onChange={e => setReviewForm({...reviewForm, status: e.target.value})} className="w-full px-4 py-3 bg-neutral-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-black appearance-none">
+                  <select value={reviewForm.gym_status} onChange={e => setReviewForm({...reviewForm, gym_status: e.target.value})} className="w-full px-4 py-3 bg-neutral-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-black appearance-none">
                     <option value="Member">Member</option>
                     <option value="Non-Member">Non-Member</option>
                     <option value="Past Member">Past Member</option>
@@ -994,7 +1066,7 @@ export default function LandingPage() {
               </div>
               <div>
                 <label className="block text-sm font-bold mb-1">Review</label>
-                <textarea required rows={4} value={reviewForm.text} onChange={e => setReviewForm({...reviewForm, text: e.target.value})} className="w-full px-4 py-3 bg-neutral-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-black resize-none" placeholder="Tell us about your experience..." />
+                <textarea required rows={4} value={reviewForm.review_text} onChange={e => setReviewForm({...reviewForm, review_text: e.target.value})} className="w-full px-4 py-3 bg-neutral-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-black resize-none" placeholder="Tell us about your experience..." />
               </div>
               <button type="submit" className="mt-2 w-full py-4 bg-black text-white rounded-full font-bold hover:bg-neutral-800 transition-colors">Submit Review</button>
             </form>

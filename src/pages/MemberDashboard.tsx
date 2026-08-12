@@ -1,6 +1,7 @@
+import Markdown from 'react-markdown';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import {  Activity, Calendar, Clock, CreditCard, Play, Plus, History, Users, Dumbbell, Wind, AlertCircle, ArrowLeft, ClipboardList, Bell, LineChart as LineChartIcon, TrendingUp, Award , Lock, User, Camera } from 'lucide-react';
+import { Menu, X, Activity, Calendar, Clock, CreditCard, Play, Plus, History, Users, Dumbbell, Wind, AlertCircle, ArrowLeft, ClipboardList, Bell, LineChart as LineChartIcon, TrendingUp, Award , Lock, User, Camera, UserPlus, Clock3, CheckCircle2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -12,6 +13,7 @@ import { supabase } from "../lib/supabase";
 export default function MemberDashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('workout');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const [selectedRoutine, setSelectedRoutine] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -22,11 +24,54 @@ export default function MemberDashboard() {
   const [plannerDiet, setPlannerDiet] = useState('Any');
   const [generatedPlan, setGeneratedPlan] = useState<any>(null);
 
+  // PT Booking State
+  const [selectedTrainer, setSelectedTrainer] = useState<any>(null);
+  const [selectedPtTime, setSelectedPtTime] = useState('');
+  const [ptBookingSuccess, setPtBookingSuccess] = useState(false);
+
+  const ptTrainers = [
+    { id: 1, name: 'Sushant Agrawal', spec: 'Powerlifting Specialist', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/Sushant.jpeg_202608011758.jpeg', rate: '₹1500/hr' },
+    { id: 2, name: 'Nidhi Singh', spec: 'Functional Training', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/Nidhi.jpeg_202608011801.jpeg', rate: '₹1200/hr' },
+    { id: 3, name: 'Bhavendra', spec: 'Bodybuilding Pro', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/WhatsApp_Image_2026-08-01_at_5.15.01_202608011759.jpeg', rate: '₹1800/hr' }
+  ];
+
+  const handlePtBooking = (e: any) => {
+    e.preventDefault();
+    if (!selectedTrainer || !selectedPtTime) return;
+    
+    // Save booking to localStorage for admin panel
+    const existing = JSON.parse(localStorage.getItem('ptBookings') || '[]');
+    const userStr = localStorage.getItem('currentUser');
+    const userEmail = userStr ? JSON.parse(userStr).email : 'member@example.com';
+    
+    existing.push({
+      id: Date.now().toString(),
+      user_email: userEmail,
+      trainer_name: selectedTrainer.name,
+      time_slot: selectedPtTime,
+      status: 'Pending',
+      created_at: new Date().toISOString()
+    });
+    localStorage.setItem('ptBookings', JSON.stringify(existing));
+
+    setPtBookingSuccess(true);
+    setTimeout(() => {
+      setPtBookingSuccess(false);
+      setSelectedTrainer(null);
+      setSelectedPtTime('');
+    }, 4000);
+  };
+
+
   // Form Checker State
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [exerciseType, setExerciseType] = useState('Squat');
   const [formFeedback, setFormFeedback] = useState('');
+  const [machineFile, setMachineFile] = useState<File | null>(null);
+  const [machinePreview, setMachinePreview] = useState<string | null>(null);
+  const [machineInstructions, setMachineInstructions] = useState('');
+  const [isMachineLoading, setIsMachineLoading] = useState(false);
 
   // Diet Tracker State
   const [foodImage, setFoodImage] = useState<File | null>(null);
@@ -63,7 +108,25 @@ export default function MemberDashboard() {
   }, [memberInfo]);
 
 
-  const currentPlan = myPlans.find(plan => new Date(plan.start_date) <= new Date() && new Date(plan.end_date) >= new Date());
+  const dbCurrentPlan = myPlans.find(plan => new Date(plan.start_date) <= new Date() && new Date(plan.end_date) >= new Date());
+  
+  // Use admin assigned plan if no active plan is found in user_plans
+  const adminPlan = (!dbCurrentPlan && memberInfo?.plan && memberInfo.plan !== 'None' && memberInfo.status === 'Active')
+    ? {
+        id: 'admin_assigned',
+        plan_name: memberInfo.plan + ' Plan',
+        months: 'Admin Assigned',
+        start_date: memberInfo.created_at || new Date().toISOString(),
+        end_date: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
+        active: true
+      }
+    : null;
+
+  const currentPlan = dbCurrentPlan || adminPlan;
+  
+  // Ensure the UI shows the admin plan in the list if they have it
+  const displayPlans = adminPlan ? [adminPlan, ...myPlans] : myPlans;
+
   const isPro = currentPlan?.plan_name?.includes('Pro');
   const isElite = currentPlan?.plan_name?.includes('Elite');
   const hasBasicAI = isPro || isElite;
@@ -71,13 +134,13 @@ export default function MemberDashboard() {
 
   const getRequiredPlan = (tabId: string) => {
     if (['aicoach', 'diettracker'].includes(tabId)) return 'Elite';
-    if (['formchecker', 'buddymatcher'].includes(tabId)) return 'Pro or Elite';
+    if (['formchecker', 'machineguide', 'buddymatcher'].includes(tabId)) return 'Pro or Elite';
     return 'Active Plan';
   };
 
   const isTabLocked = (tabId: string) => {
     if (['aicoach', 'diettracker'].includes(tabId)) return !hasFullAI;
-    if (['formchecker', 'buddymatcher'].includes(tabId)) return !hasBasicAI;
+    if (['formchecker', 'machineguide', 'buddymatcher'].includes(tabId)) return !hasBasicAI;
     return false;
   };
 
@@ -230,6 +293,46 @@ export default function MemberDashboard() {
     }
   };
 
+  const handleMachineFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setMachineFile(file);
+      setMachinePreview(URL.createObjectURL(file));
+      setMachineInstructions('');
+    }
+  };
+
+  const handleMachineGuideSubmit = async () => {
+    if (!machineFile) return;
+    setIsMachineLoading(true);
+    setMachineInstructions('');
+    try {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64Data = (reader.result as string).split(',')[1];
+        const res = await fetch('/api/ai/machine-guide', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileData: base64Data,
+            mimeType: machineFile.type,
+          })
+        });
+        const data = await res.json();
+        if (data.instructions) {
+          setMachineInstructions(data.instructions);
+        } else {
+          setMachineInstructions('Failed to analyze the machine. Please try again.');
+        }
+      };
+      reader.readAsDataURL(machineFile);
+    } catch (e) {
+      setMachineInstructions('An error occurred during analysis.');
+    } finally {
+      setIsMachineLoading(false);
+    }
+  };
+
   const checkForm = async () => {
     if (!videoFile || !videoPreview) return;
     setIsAiLoading(true);
@@ -335,12 +438,47 @@ export default function MemberDashboard() {
       
       if (data) {
         setWorkoutLogs(prev => [data, ...prev]);
+        
         setLogForms(prev => {
           const newState = { ...prev };
           delete newState[idx];
           return newState;
         });
+        
+        // Streak Logic
+        const todayStr = new Date().toISOString().split('T')[0];
+        let newStreak = memberInfo.streak_count || 0;
+        let shouldUpdateStreak = false;
+        
+        if (memberInfo.last_workout_date !== todayStr) {
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          const yesterdayStr = yesterday.toISOString().split('T')[0];
+          
+          if (memberInfo.last_workout_date === yesterdayStr) {
+            newStreak += 1;
+          } else {
+            newStreak = 1;
+          }
+          
+          shouldUpdateStreak = true;
+        }
+
+        if (shouldUpdateStreak) {
+          const { data: updatedMember, error: streakError } = await supabase
+            .from('members')
+            .update({ streak_count: newStreak, last_workout_date: todayStr })
+            .eq('id', memberInfo.id)
+            .select()
+            .single();
+            
+          if (!streakError && updatedMember) {
+            setMemberInfo(updatedMember);
+          }
+        }
+        
         alert('Set logged successfully!');
+
       }
     } catch (e: any) {
       alert('Failed to log set: ' + (e.message || 'Unknown error'));
@@ -361,24 +499,57 @@ const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-neu-base)] flex flex-col md:flex-row">
+    <div className="min-h-screen bg-[var(--color-neu-base)] flex flex-col md:flex-row relative">
+      {/* Mobile Header */}
+      <div className="md:hidden flex items-center justify-between p-4 sticky top-0 z-40 bg-[var(--color-neu-base)] shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
+          <div className="neu-convex p-2 rounded-lg">
+            <Activity className="text-[var(--color-brand-primary)] w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="font-bold text-lg leading-tight">FITNESS</h2>
+          </div>
+        </div>
+        <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 neu-flat rounded-lg">
+          <Menu className="w-6 h-6 text-black" />
+        </button>
+      </div>
+
+      {/* Sidebar Overlay (Mobile) */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 md:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Sidebar */}
       <motion.aside 
         initial={{ x: -100, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        className="w-full md:w-80 p-6 flex flex-col gap-8"
+        className={`fixed md:sticky top-0 left-0 h-screen w-72 md:w-80 p-6 flex flex-col gap-8 bg-[var(--color-neu-base)] z-50 transition-transform duration-300 md:translate-x-0 overflow-y-auto shadow-2xl md:shadow-none ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
-        <div className="flex items-center gap-4 cursor-pointer" onClick={() => navigate('/')}>
-          <div className="neu-convex p-3 rounded-xl">
-            <Activity className="text-[var(--color-brand-primary)]" />
+        <div className="flex items-center justify-between md:justify-start gap-4">
+          <div className="flex items-center gap-4 cursor-pointer" onClick={() => navigate('/')}>
+            <div className="neu-convex p-3 rounded-xl">
+              <Activity className="text-[var(--color-brand-primary)]" />
+            </div>
+            <div>
+              <h2 className="font-bold text-xl">FITNESS</h2>
+              <p className="text-sm opacity-70">Member Portal</p>
+            </div>
           </div>
-          <div>
-            <h2 className="font-bold text-xl">JAI BALAJI ELITE FITNESS</h2>
-            <p className="text-sm opacity-70">Member Portal</p>
-          </div>
+          <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden p-2 neu-flat rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        <nav className="flex md:flex-col gap-4 overflow-x-auto pb-4 md:pb-0">
+        <nav className="flex flex-col gap-4 pb-4 md:pb-0">
           {[
             { id: 'workout', icon: Play, label: 'Workout Tracker' },
             { id: 'progress', icon: LineChartIcon, label: 'Progress Tracking' },
@@ -387,9 +558,11 @@ const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
             { id: 'aicoach', icon: Wind, label: 'Smart Planner' },
             { id: 'diettracker', icon: Activity, label: 'Diet Tracker' },
             { id: 'formchecker', icon: Activity, label: 'Form Checker' },
+            { id: 'machineguide', icon: Camera, label: 'Machine Guide' },
             { id: 'buddymatcher', icon: Users, label: 'Buddy Matcher' },
             { id: 'achievements', icon: Activity, label: 'Achievements' },
             { id: 'classes', icon: Calendar, label: 'Book Classes' },
+            { id: 'ptbooking', icon: UserPlus, label: 'Book PT Session' },
             { id: 'profile', icon: User, label: 'Profile Settings' },
             { id: 'subscription', icon: CreditCard, label: 'Subscription' },
             { id: 'logout', icon: ArrowLeft, label: 'Log Out' },
@@ -399,6 +572,7 @@ const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
               variant={activeTab === tab.id ? 'primary' : 'default'}
               className={`justify-start gap-4 flex-shrink-0 ${tab.id === 'logout' ? 'text-red-600' : ''}`}
               onClick={async () => {
+                setIsMobileMenuOpen(false);
                 if (tab.id === 'logout') {
                   localStorage.removeItem('currentUser');
                   navigate('/');
@@ -422,10 +596,9 @@ const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
             </Button>
           ))}
         </nav>
-
         
         {/* User Profile Card */}
-        <Card variant="flat" className="hidden md:flex items-center gap-4 p-4 mt-auto">
+        <Card variant="flat" className="flex items-center gap-4 p-4 mt-auto">
           <div className="w-12 h-12 bg-neutral-200 rounded-full flex items-center justify-center overflow-hidden border-2 border-white shadow-sm shrink-0">
             {memberInfo?.photo_url ? (
               <img src={memberInfo.photo_url} alt="Profile" className="w-full h-full object-cover" />
@@ -597,10 +770,10 @@ const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
                 <Card>
                   <h3 className="text-xl font-bold mb-4">Purchased Plans</h3>
                   <div className="space-y-4">
-                    {myPlans.length === 0 ? (
+                    {displayPlans.length === 0 ? (
                       <p className="opacity-70">No plans purchased yet.</p>
                     ) : (
-                      myPlans.map((plan) => {
+                      displayPlans.map((plan) => {
                         const start = new Date(plan.start_date);
                         const end = new Date(plan.end_date);
                         // Count attendance within this plan's period
@@ -651,13 +824,17 @@ const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
 
           {activeTab === 'workout' && (
             <>
-                            <div className="flex justify-between items-center">
+                            <div className="flex justify-between items-center mb-6">
                 <h2 className="text-3xl font-black tracking-tight">Workout Programs</h2>
                 <div className="flex items-center gap-4">
+                  <div className="hidden md:flex items-center gap-2 bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)] px-4 py-2 rounded-full font-bold">
+                    <Award className="w-5 h-5" />
+                    <span>{memberInfo?.streak_count || 0} Day Streak</span>
+                  </div>
                   <Button variant="secondary" onClick={() => setIsCreatingRoutine(true)}>
                     <Plus className="w-5 h-5 mr-2" /> Create Custom
                   </Button>
-                  <p className="font-medium opacity-70">{new Date().toLocaleDateString()}</p>
+                  <p className="font-medium opacity-70 hidden lg:block">{new Date().toLocaleDateString()}</p>
                 </div>
               </div>
 
@@ -986,6 +1163,124 @@ const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
                   <h3 className="text-xl font-bold mb-4">Feedback</h3>
                   <p className="font-medium opacity-90">{formFeedback}</p>
                 </Card>
+              )}
+            </>
+          )}
+
+                    {activeTab === 'machineguide' && (
+            <>
+              <h2 className="text-3xl font-black tracking-tight mb-8">AI Machine Guide</h2>
+              <Card className="flex flex-col gap-6 mb-8">
+                <div>
+                  <h3 className="font-bold mb-2">Upload or Take a Photo of a Machine</h3>
+                  <p className="text-sm opacity-70 mb-4">Our AI will identify the machine and tell you how to use it safely in both English and Hinglish.</p>
+                  
+                  <div className="border-2 border-dashed border-[var(--color-brand-primary)] rounded-xl p-8 text-center bg-[var(--color-neu-light)] relative">
+                    {machinePreview ? (
+                      <div className="flex flex-col items-center z-10 relative">
+                        <img src={machinePreview} alt="Machine preview" className="max-h-64 object-contain rounded-xl mb-4 shadow-sm" />
+                        <Button variant="default" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMachineFile(null); setMachinePreview(null); setMachineInstructions(''); }}>
+                          Clear Photo
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center">
+                        <Camera className="w-12 h-12 text-[var(--color-brand-primary)] mb-4" />
+                        <p className="font-medium mb-4">Click to upload or capture</p>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          capture="environment"
+                          onChange={handleMachineFileChange}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Button 
+                  variant="primary" 
+                  className="w-full py-4 text-lg font-bold" 
+                  onClick={handleMachineGuideSubmit}
+                  disabled={!machineFile || isMachineLoading}
+                >
+                  {isMachineLoading ? 'Analyzing Machine...' : 'Analyze Machine'}
+                </Button>
+
+                {machineInstructions && (
+                  <div className="mt-4 p-6 bg-[var(--color-neu-base)] border border-[var(--color-neu-border)] rounded-2xl shadow-sm">
+                    <h4 className="font-bold mb-4 flex items-center gap-2">
+                      <Wind className="w-5 h-5 text-[var(--color-brand-primary)]" />
+                      AI Instructions
+                    </h4>
+                    <div className="markdown-body space-y-4">
+                      <Markdown>{machineInstructions}</Markdown>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            </>
+          )}
+
+          
+          {activeTab === 'ptbooking' && (
+            <>
+              <h2 className="text-3xl font-black tracking-tight mb-8">Personal Training</h2>
+              
+              {ptBookingSuccess ? (
+                <div className="bg-green-50 border border-green-200 text-green-700 p-8 rounded-2xl flex flex-col items-center justify-center text-center">
+                  <CheckCircle2 className="w-16 h-16 text-green-600 mb-4" />
+                  <h3 className="text-2xl font-bold mb-2">Session Booked!</h3>
+                  <p className="font-medium">Your request for {selectedPtTime} with {selectedTrainer?.name} has been confirmed. See you on the gym floor!</p>
+                  <Button variant="default" className="mt-6" onClick={() => setPtBookingSuccess(false)}>Book Another</Button>
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  <p className="text-stone-500 font-medium">Select a certified trainer below to schedule your 1-on-1 coaching session.</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {ptTrainers.map(trainer => (
+                      <div 
+                        key={trainer.id} 
+                        onClick={() => setSelectedTrainer(trainer)}
+                        className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${selectedTrainer?.id === trainer.id ? 'border-black bg-stone-50' : 'border-stone-200 hover:border-stone-300 bg-white'}`}
+                      >
+                        <img src={trainer.img} alt={trainer.name} className="w-full h-40 object-cover rounded-xl mb-4 grayscale hover:grayscale-0 transition-all" />
+                        <h3 className="text-xl font-bold">{trainer.name}</h3>
+                        <p className="text-sm font-bold text-[var(--color-brand-primary)] uppercase tracking-wider mb-2">{trainer.spec}</p>
+                        <p className="text-sm font-bold opacity-60">{trainer.rate}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {selectedTrainer && (
+                    <Card className="p-8 bg-stone-50 border-stone-200 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                      <h3 className="text-xl font-bold mb-6">Schedule with {selectedTrainer.name}</h3>
+                      <form onSubmit={handlePtBooking} className="flex flex-col md:flex-row gap-4 items-end">
+                        <div className="flex-1 w-full">
+                          <label className="block text-sm font-bold opacity-70 mb-2">Preferred Time Slot</label>
+                          <select 
+                            required
+                            className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl focus:outline-none focus:border-black font-medium"
+                            value={selectedPtTime}
+                            onChange={(e) => setSelectedPtTime(e.target.value)}
+                          >
+                            <option value="">Select a time...</option>
+                            <option value="Tomorrow 08:00 AM">Tomorrow 08:00 AM</option>
+                            <option value="Tomorrow 10:30 AM">Tomorrow 10:30 AM</option>
+                            <option value="Tomorrow 05:00 PM">Tomorrow 05:00 PM</option>
+                            <option value="Wednesday 07:00 AM">Wednesday 07:00 AM</option>
+                            <option value="Wednesday 06:00 PM">Wednesday 06:00 PM</option>
+                          </select>
+                        </div>
+                        <Button variant="primary" type="submit" className="w-full md:w-auto px-8 h-[50px] shrink-0">
+                          Confirm Booking
+                        </Button>
+                      </form>
+                    </Card>
+                  )}
+                </div>
               )}
             </>
           )}

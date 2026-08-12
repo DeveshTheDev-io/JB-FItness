@@ -53,7 +53,7 @@ export default function GymChatbot() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[100] flex flex-col items-end">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[100] flex flex-col items-end pointer-events-none">
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -61,9 +61,9 @@ export default function GymChatbot() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="mb-4 origin-bottom-right"
+            className="fixed bottom-20 right-4 left-4 top-4 sm:left-auto sm:top-auto sm:bottom-24 sm:right-6 origin-bottom-right pointer-events-auto flex flex-col justify-end"
           >
-            <Card className="flex flex-col w-[calc(100vw-32px)] sm:w-[400px] h-[calc(100dvh-120px)] max-h-[600px] sm:h-[500px] p-0 overflow-hidden shadow-2xl border border-neutral-200">
+            <Card className="flex flex-col w-full h-full sm:w-[400px] sm:h-[500px] sm:max-h-[600px] p-0 overflow-hidden shadow-2xl border border-neutral-200">
               <div className="bg-[var(--color-brand-secondary)] p-4 text-white flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center shrink-0">
@@ -122,14 +122,15 @@ export default function GymChatbot() {
 
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 ${isOpen ? 'bg-neutral-800 text-white rotate-90 scale-90 opacity-0 pointer-events-none absolute' : 'bg-[var(--color-brand-primary)] text-black hover:scale-105 active:scale-95 z-50'}`}
+        style={{ pointerEvents: isOpen ? "none" : "auto" }}
+        className={`w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 ${isOpen ? 'bg-neutral-800 text-white rotate-90 scale-90 opacity-0 pointer-events-none absolute' : 'bg-[var(--color-brand-primary)] text-black hover:scale-105 active:scale-95 z-50 pointer-events-auto'}`}
       >
         <Dumbbell className="w-6 h-6" />
       </button>
       {isOpen && (
         <button 
           onClick={() => setIsOpen(false)}
-          className="w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 bg-neutral-800 text-white hover:scale-105 active:scale-95 absolute bottom-0 right-0 z-50"
+          className="w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 bg-neutral-800 text-white hover:scale-105 active:scale-95 absolute bottom-0 right-0 z-50 pointer-events-auto"
         >
           <X className="w-6 h-6" />
         </button>

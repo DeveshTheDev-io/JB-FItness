@@ -114,4 +114,17 @@ ALTER TABLE public.members ADD COLUMN IF NOT EXISTS photo_url TEXT;
 ALTER TABLE public.members ADD COLUMN IF NOT EXISTS dob TEXT;
 ALTER TABLE public.members ADD COLUMN IF NOT EXISTS phone TEXT;
 ALTER TABLE public.members ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE public.members ADD COLUMN IF NOT EXISTS streak_count INTEGER DEFAULT 0;
+ALTER TABLE public.members ADD COLUMN IF NOT EXISTS last_workout_date DATE;
 ALTER TABLE public.members ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now());
+
+-- 12. Reviews Table
+CREATE TABLE IF NOT EXISTS public.reviews (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    gender TEXT,
+    status TEXT,
+    rating INTEGER DEFAULT 5,
+    text TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);

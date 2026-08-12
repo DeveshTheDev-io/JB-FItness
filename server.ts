@@ -30,7 +30,7 @@ async function startServer() {
     try {
       const { goal, experience } = req.body;
       const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
+        model: "gemini-3.1-flash-lite",
         contents: `I am a gym member with ${experience} experience. My goal is ${goal}. Give me a short 3-bullet point advice on my routine.`,
       });
       res.json({ advice: response.text });
@@ -50,7 +50,7 @@ async function startServer() {
       }
       
       const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
+        model: "gemini-3.1-flash-lite",
         contents: prompt,
       });
       res.json({ insights: response.text });
@@ -64,11 +64,33 @@ async function startServer() {
     try {
       const { goal, weight, diet } = req.body;
       const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
+        model: "gemini-3.1-flash-lite",
         contents: `Generate a 4-week workout and diet plan for a gym member. Goal: ${goal}. Current weight: ${weight}kg. Diet preference: ${diet}. Respond in valid JSON format with this structure: { "workoutPlan": [{ "week": 1, "focus": "...", "exercises": ["..."] }], "dietPlan": { "dailyCalories": 2000, "macros": "...", "meals": ["..."] } }`,
         config: { responseMimeType: "application/json" }
       });
       res.json(JSON.parse(response.text));
+    } catch (error: any) {
+      console.error(error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+    app.post("/api/ai/machine-guide", async (req, res) => {
+    try {
+      const { fileData, mimeType } = req.body;
+      const response = await ai.models.generateContent({
+        model: "gemini-3.1-flash-lite",
+        contents: [
+          {
+            inlineData: {
+              data: fileData,
+              mimeType: mimeType,
+            }
+          },
+          `Analyze this image of a gym machine. Identify the machine and provide step-by-step instructions on how to use it safely and effectively. Provide the instructions in both English and Hinglish (Hindi written in English alphabet). Keep it concise, engaging, and easy to read. Use bullet points.`
+        ]
+      });
+      res.json({ instructions: response.text });
     } catch (error: any) {
       console.error(error);
       res.status(500).json({ error: error.message });
@@ -80,7 +102,7 @@ async function startServer() {
       const { fileData, mimeType, exercise } = req.body;
       
       const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
+        model: "gemini-3.1-flash-lite",
         contents: [
           {
             inlineData: {
@@ -127,7 +149,7 @@ async function startServer() {
       const systemInstruction = "You are a friendly, 24/7 AI gym receptionist and personal coach for JB Fitness named JB Fitness A.I. You understand and can reply fluently in both Hinglish (Hindi written in English alphabet) and English, depending on what language the user speaks. You can answer questions about website plans, community events, gym rules, class schedules (Yoga at 6 PM Tue/Thu, HIIT at 7 AM Mon/Wed), and general fitness advice. IMPORTANT RULE: Information specifically about diet and workouts MUST ONLY be given to members having an active plan purchased. Current User Status: " + memberStatusText + ". If the user's status is 'Guest' or 'Expired' and they ask for diet plans, workout routines, or specific exercise/diet advice, politely inform them that they need to purchase or renew a plan to access premium diet and workout features. You can still talk about general topics like gym timings, prices, and features. You have tools to check the user's workout history and book classes for them. Be concise, engaging, and helpful. Format your responses in a highly professional, well-structured manner using markdown bullet points, bold text for emphasis, and short paragraphs to make it easily readable.";
 
       const chat = ai.chats.create({
-        model: "gemini-3.6-flash",
+        model: "gemini-3.1-flash-lite",
         config: {
           systemInstruction,
           tools: [{
@@ -205,7 +227,7 @@ async function startServer() {
     try {
       const { fileData, mimeType } = req.body;
       const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
+        model: "gemini-3.1-flash-lite",
         contents: [
           {
             inlineData: {
@@ -228,7 +250,7 @@ async function startServer() {
     try {
       const { reports } = req.body;
       const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
+        model: "gemini-3.1-flash-lite",
         contents: `Analyze these gym equipment fault reports: ${JSON.stringify(reports)}. Predict which high-use machines need maintenance. Respond in valid JSON format with this structure: { "predictions": [{ "machine": "...", "urgency": "High|Medium|Low", "reason": "..." }] }`,
         config: { responseMimeType: "application/json" }
       });

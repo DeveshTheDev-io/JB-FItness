@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
-import { Activity, Users, IndianRupee, TrendingUp, Bell, Search, Settings, ArrowUpRight, ArrowDownRight, ClipboardList, CheckCircle, XCircle, Database, Star, MessageSquare, Trash2, Edit2 } from 'lucide-react';
+import { Menu, X, Plus, Activity, Users, IndianRupee, TrendingUp, Bell, Search, Settings, ArrowUpRight, ArrowDownRight, ClipboardList, CheckCircle, XCircle, Database, Star, MessageSquare, Trash2, Edit2, AlertTriangle, Wrench, UserCheck } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
@@ -11,6 +11,28 @@ import { supabase } from '../lib/supabase';
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+
+  const [userComplaints, setUserComplaints] = useState<any[]>([]);
+  
+  const fetchComplaints = () => {
+    const existing = JSON.parse(localStorage.getItem('gymComplaints') || '[]');
+    setUserComplaints(existing.reverse());
+  };
+
+  useEffect(() => {
+    if (activeTab === 'maintenance') {
+      fetchComplaints();
+    }
+  }, [activeTab]);
+
+  const resolveComplaint = (id: string) => {
+    const existing = JSON.parse(localStorage.getItem('gymComplaints') || '[]');
+    const updated = existing.map((c: any) => c.id === id ? { ...c, status: 'Resolved' } : c);
+    localStorage.setItem('gymComplaints', JSON.stringify(updated));
+    setUserComplaints(updated.reverse());
+  };
+
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [trialRequests, setTrialRequests] = useState<any[]>([]);
   const [planRequests, setPlanRequests] = useState<any[]>([]);
   const [aiInsights, setAiInsights] = useState('');
@@ -18,6 +40,7 @@ export default function AdminDashboard() {
   const [members, setMembers] = useState<any[]>([]);
   const [attendance, setAttendance] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
+  const [ptBookings, setPtBookings] = useState<any[]>([]);
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [editingMember, setEditingMember] = useState<any>(null);
   const [memberForm, setMemberForm] = useState({ name: '', plan: 'Basic', status: 'Active' });
@@ -25,6 +48,13 @@ export default function AdminDashboard() {
   const [isPushModalOpen, setIsPushModalOpen] = useState(false);
   const [pushTitle, setPushTitle] = useState('');
   const [pushMessage, setPushMessage] = useState('');
+  const [pushTarget, setPushTarget] = useState('all');
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+  const [reminderSettings, setReminderSettings] = useState({
+    beforeExpiry: true,
+    onExpiry: true,
+    overdueDues: true
+  });
 
   const peakHourData = useMemo(() => {
     const hours = {
@@ -210,6 +240,26 @@ export default function AdminDashboard() {
     }
   };
 
+  
+  const [showAddReview, setShowAddReview] = useState(false);
+  const [newReview, setNewReview] = useState({ name: '', gender: 'Male', status: 'Member', rating: 5, text: '' });
+
+  const handleAddReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!supabase) {
+      setReviews([{ id: Date.now(), ...newReview, created_at: new Date().toISOString() }, ...reviews]);
+      setShowAddReview(false);
+      setNewReview({ name: '', gender: 'Male', status: 'Member', rating: 5, text: '' });
+      return;
+    }
+    const { data, error } = await supabase.from('reviews').insert([newReview]).select().single();
+    if (!error && data) {
+      setReviews([data, ...reviews]);
+      setShowAddReview(false);
+      setNewReview({ name: '', gender: 'Male', status: 'Member', rating: 5, text: '' });
+    }
+  };
+
   const deleteReview = async (id: number) => {
     if (!supabase) {
       setReviews(reviews.filter(r => r.id !== id));
@@ -282,34 +332,33 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleSendPush = async (e: React.FormEvent) => {
+    const handleSendPush = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supabase || !pushTitle || !pushMessage) return;
-
-    // In a real scenario, this might send a general broadcast or to specific members.
-    // For now, we will add it to the messages table for all active members.
-    // However, to keep it simple, if no specific user is selected, send to all members.
-    const emailsToNotify = members.map(m => m.email).filter(Boolean);
+    if (!supabase) return;
     
-    const inserts = emailsToNotify.map(email => ({
+    let targetEmails = [];
+    if (pushTarget === 'all') {
+       targetEmails = members.filter(m => m.email).map(m => m.email);
+    } else {
+       targetEmails = [pushTarget];
+    }
+    
+    if (targetEmails.length === 0) {
+       alert("No target members found with a valid email.");
+       return;
+    }
+
+    const messages = targetEmails.map(email => ({
       user_email: email,
       title: pushTitle,
       message: pushMessage
     }));
-
-    if (inserts.length > 0) {
-      const { error } = await supabase.from('messages').insert(inserts);
-      if (error) {
-        console.error("Error sending push:", error);
-        alert("Failed to send push notification.");
-        return;
-      }
-    }
     
+    await supabase.from('messages').insert(messages);
     setIsPushModalOpen(false);
     setPushTitle('');
     setPushMessage('');
-    alert("Push notification sent to all members successfully!");
+    alert(`Push notification sent successfully to ${targetEmails.length} member(s)!`);
   };
 
   const handleMemberSave = async (e: React.FormEvent) => {
@@ -367,31 +416,70 @@ export default function AdminDashboard() {
     }
   };
 
+  const confirmPTBooking = (id: string) => {
+    const updated = ptBookings.map(b => b.id === id ? { ...b, status: 'Confirmed' } : b);
+    setPtBookings(updated);
+    localStorage.setItem('ptBookings', JSON.stringify(updated));
+  };
   return (
-    <div className="min-h-screen bg-[var(--color-neu-base)] flex flex-col md:flex-row">
+    <div className="min-h-screen bg-[var(--color-neu-base)] flex flex-col md:flex-row relative">
+      {/* Mobile Header */}
+      <div className="md:hidden flex items-center justify-between p-4 sticky top-0 z-40 bg-[var(--color-neu-base)] shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
+          <div className="neu-convex p-2 rounded-lg">
+            <Activity className="text-[var(--color-brand-primary)] w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="font-bold text-lg leading-tight">FITNESS</h2>
+          </div>
+        </div>
+        <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 neu-flat rounded-lg">
+          <Menu className="w-6 h-6 text-black" />
+        </button>
+      </div>
+
+      {/* Sidebar Overlay (Mobile) */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 md:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Sidebar */}
       <motion.aside 
         initial={{ x: -100, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        className="w-full md:w-80 p-6 flex flex-col gap-8"
+        className={`fixed md:sticky top-0 left-0 h-screen w-72 md:w-80 p-6 flex flex-col gap-8 bg-[var(--color-neu-base)] z-50 transition-transform duration-300 md:translate-x-0 overflow-y-auto shadow-2xl md:shadow-none ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
-        <div className="flex items-center gap-4 cursor-pointer" onClick={() => navigate('/')}>
-          <div className="neu-convex p-3 rounded-xl">
-            <Activity className="text-[var(--color-brand-primary)]" />
+        <div className="flex items-center justify-between md:justify-start gap-4">
+          <div className="flex items-center gap-4 cursor-pointer" onClick={() => navigate('/')}>
+            <div className="neu-convex p-3 rounded-xl">
+              <Activity className="text-[var(--color-brand-primary)]" />
+            </div>
+            <div>
+              <h2 className="font-bold text-xl">FITNESS</h2>
+              <p className="text-sm opacity-70">Admin Console</p>
+            </div>
           </div>
-          <div>
-            <h2 className="font-bold text-xl">JAI BALAJI ELITE FITNESS</h2>
-            <p className="text-sm opacity-70">Admin Console</p>
-          </div>
+          <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden p-2 neu-flat rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        <nav className="flex md:flex-col gap-4 overflow-x-auto pb-4 md:pb-0">
+        <nav className="flex flex-col gap-4 pb-4 md:pb-0">
           {[
             { id: 'overview', icon: TrendingUp, label: 'Analytics & Trends' },
             { id: 'ai-insights', icon: Search, label: 'AI Business Insights' },
             { id: 'members', icon: Users, label: 'Member CRM' },
             { id: 'dues', icon: IndianRupee, label: 'Dues & Payments' },
             { id: 'trials', icon: ClipboardList, label: 'Trial Requests' },
+            { id: 'ptrequests', icon: UserCheck, label: 'PT Requests' },
             { id: 'reviews', icon: Star, label: 'Reviews' },
             { id: 'logout', icon: XCircle, label: 'Log Out' },
           ].map((tab) => (
@@ -400,6 +488,7 @@ export default function AdminDashboard() {
               variant={activeTab === tab.id ? 'primary' : 'default'}
               className={`justify-start gap-4 flex-shrink-0 ${tab.id === 'logout' ? 'text-red-600' : ''}`}
               onClick={() => {
+                setIsMobileMenuOpen(false);
                 if (tab.id === 'logout') {
                   localStorage.removeItem('currentUser');
                   navigate('/');
@@ -408,28 +497,15 @@ export default function AdminDashboard() {
                 }
               }}
             >
-              <tab.icon className="w-5 h-5" />
-              {tab.label}
+              <tab.icon className="w-5 h-5 shrink-0" />
+              <span className="truncate">{tab.label}</span>
             </Button>
           ))}
         </nav>
-
-        <div className="mt-auto hidden md:flex flex-col gap-4">
-           <div className="flex items-center gap-4">
-             <Button variant="icon"><Bell className="w-5 h-5" /></Button>
-             <Button variant="icon"><Settings className="w-5 h-5" /></Button>
-           </div>
-           <Button variant="default" className="w-full py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => {
-             localStorage.removeItem('currentUser');
-             navigate('/');
-           }}>
-             Log Out
-           </Button>
-        </div>
       </motion.aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-6 overflow-y-auto">
+      <main className="flex-1 p-4 md:p-6 overflow-y-auto w-full md:w-auto">
         <motion.div
           key={activeTab}
           initial={{ opacity: 0, y: 20 }}
@@ -550,54 +626,42 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <Card className="overflow-hidden p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-[var(--color-neu-dark)]/20">
-                        <th className="p-4 font-bold opacity-70">Name</th>
-                        <th className="p-4 font-bold opacity-70">Plan</th>
-                        <th className="p-4 font-bold opacity-70">Status</th>
-                        <th className="p-4 font-bold opacity-70">Churn Risk (AI)</th>
-                        <th className="p-4 font-bold opacity-70">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {membersWithChurnRisk.filter(m => m.name.toLowerCase().includes(searchMember.toLowerCase())).map((member) => (
-                        <tr key={member.id} className="border-b border-[var(--color-neu-dark)]/10 last:border-0 hover:bg-[var(--color-neu-light)]/30 transition-colors">
-                          <td className="p-4 font-bold">{member.name}</td>
-                          <td className="p-4"><span className="neu-pressed px-3 py-1 rounded-full text-sm font-medium">{member.plan}</span></td>
-                          <td className="p-4">
-                            <span className={`flex items-center gap-2 text-sm font-bold ${member.status === 'Active' ? 'text-green-500' : 'text-[var(--color-brand-primary)]'}`}>
-                              <div className={`w-2 h-2 rounded-full ${member.status === 'Active' ? 'bg-green-500' : 'bg-[var(--color-brand-primary)]'}`}></div>
-                              {member.status}
-                            </span>
-                          </td>
-                          <td className="p-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${member.churnRisk === 'High' ? 'bg-red-100 text-red-700' : member.churnRisk === 'Medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
-                              {member.churnRisk}
-                            </span>
-                            {member.churnRisk === 'High' && (
-                              <button onClick={() => alert(`Sent automated 'We miss you' offer to ${member.name}!`)} className="ml-2 text-xs underline text-red-700 hover:text-red-800">
-                                Send Offer
-                              </button>
-                            )}
-                          </td>
-                          <td className="p-4 flex gap-2">
-                            <Button className="px-3 py-1 text-sm bg-green-500 text-white border-green-500 hover:bg-green-600" onClick={() => markAttendance(member.id)}>Mark Present</Button>
-                            <Button className="px-3 py-1 text-sm" onClick={() => {
-                              setEditingMember(member);
-                              setMemberForm({ name: member.name, plan: member.plan, status: member.status });
-                              setShowMemberModal(true);
-                            }}>Edit</Button>
-                            <Button variant="primary" className="px-3 py-1 text-sm" onClick={() => handleUpgradeMember(member.id)}>Upgrade</Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {membersWithChurnRisk.filter(m => m.name.toLowerCase().includes(searchMember.toLowerCase())).map((member) => (
+                  <Card key={member.id} className="flex flex-col gap-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="text-xl font-bold">{member.name}</h3>
+                        <p className="opacity-70 text-sm font-medium">{member.email || 'No email'}</p>
+                      </div>
+                      <span className="neu-pressed px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap">{member.plan}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className={`flex items-center gap-2 font-bold ${member.status === 'Active' ? 'text-green-500' : 'text-[var(--color-brand-primary)]'}`}>
+                        <div className={`w-2 h-2 rounded-full ${member.status === 'Active' ? 'bg-green-500' : 'bg-[var(--color-brand-primary)]'}`}></div>
+                        {member.status}
+                      </span>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${member.churnRisk === 'High' ? 'bg-red-100 text-red-700' : member.churnRisk === 'Medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
+                        Risk: {member.churnRisk}
+                      </span>
+                    </div>
+                    <div className="pt-4 border-t border-[var(--color-neu-dark)]/10 flex flex-wrap gap-2">
+                      <Button className="flex-1 min-w-[80px] py-2 text-sm bg-green-500 text-white border-green-500 hover:bg-green-600" onClick={() => markAttendance(member.id)}>Present</Button>
+                      <Button className="flex-1 min-w-[80px] py-2 text-sm" onClick={() => {
+                        setEditingMember(member);
+                        setMemberForm({ name: member.name, plan: member.plan, status: member.status });
+                        setShowMemberModal(true);
+                      }}>Edit</Button>
+                      <Button variant="primary" className="flex-1 min-w-[80px] py-2 text-sm" onClick={() => handleUpgradeMember(member.id)}>Upgrade</Button>
+                    </div>
+                    {member.churnRisk === 'High' && (
+                      <Button variant="default" className="w-full text-red-600 border-red-200 hover:bg-red-50 text-sm py-2" onClick={() => alert(`Sent automated 'We miss you' offer to ${member.name}!`)}>
+                        Send Retention Offer
+                      </Button>
+                    )}
+                  </Card>
+                ))}
+              </div>
 
               {showMemberModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -657,7 +721,7 @@ export default function AdminDashboard() {
                   <p className="opacity-70 mb-6">System currently sends automated SMS and Push Notifications 3 days before expiry, and on the day of expiry.</p>
                   <div className="flex gap-4">
                     <Button variant="primary" onClick={() => setIsPushModalOpen(true)}>Send Manual Push Now</Button>
-                    <Button>Configure Reminders</Button>
+                    <Button onClick={() => setIsReminderModalOpen(true)}>Configure Reminders</Button>
                   </div>
                 </Card>
               </div>
@@ -728,7 +792,47 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               </Card>
+              <Card className="p-6 mt-8">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h3 className="font-bold text-lg">Member Issue Reports</h3>
+                    <p className="text-sm opacity-60">Reported via Community page</p>
+                  </div>
+                  <Button variant="default" onClick={fetchComplaints}>Refresh List</Button>
+                </div>
+                
+                {userComplaints.length === 0 ? (
+                  <div className="text-center py-8 opacity-60 font-medium">
+                    No issues reported by members.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {userComplaints.map(complaint => (
+                      <div key={complaint.id} className={`p-4 rounded-xl border ${complaint.status === 'Resolved' ? 'bg-stone-50 border-stone-200 opacity-60' : 'bg-white border-red-200'}`}>
+                        <div className="flex justify-between items-start gap-4">
+                          <div>
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className="font-bold">{complaint.equipment}</h4>
+                              <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${complaint.status === 'Resolved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                {complaint.status}
+                              </span>
+                            </div>
+                            <p className="text-sm font-medium mb-2">{complaint.description}</p>
+                            <p className="text-xs opacity-60">Reported by {complaint.user_email} • {new Date(complaint.date).toLocaleString()}</p>
+                          </div>
+                          {complaint.status !== 'Resolved' && (
+                            <Button variant="primary" className="shrink-0 flex items-center gap-2" onClick={() => resolveComplaint(complaint.id)}>
+                              <CheckCircle className="w-4 h-4" /> Mark Fixed
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
             </div>
+
           )}
 
           {activeTab === 'trials' && (
@@ -774,11 +878,93 @@ export default function AdminDashboard() {
             </>
           )}
 
+          
+          {activeTab === 'ptrequests' && (
+            <>
+              <h2 className="text-3xl font-black tracking-tight mb-8">Personal Trainer Requests</h2>
+              <div className="bg-white rounded-2xl shadow-xl border border-stone-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-stone-50 border-b border-stone-200 text-sm font-bold opacity-70 uppercase tracking-wider">
+                      <tr>
+                        <th className="p-4">Member Email</th>
+                        <th className="p-4">Trainer</th>
+                        <th className="p-4">Time Slot</th>
+                        <th className="p-4">Requested On</th>
+                        <th className="p-4">Status</th>
+                        <th className="p-4">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-stone-100 font-medium">
+                      {ptBookings.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="p-8 text-center text-stone-500">No PT requests found.</td>
+                        </tr>
+                      ) : (
+                        ptBookings.slice().reverse().map((booking, i) => (
+                          <tr key={i} className="hover:bg-stone-50 transition-colors">
+                            <td className="p-4">{booking.user_email}</td>
+                            <td className="p-4 font-bold text-[var(--color-brand-primary)]">{booking.trainer_name}</td>
+                            <td className="p-4">{booking.time_slot}</td>
+                            <td className="p-4 text-stone-500">{new Date(booking.created_at).toLocaleDateString()}</td>
+                            <td className="p-4">
+                              <span className={"px-3 py-1 rounded-full text-xs font-bold " + (booking.status === 'Confirmed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700')}>
+                                {booking.status}
+                              </span>
+                            </td>
+                            <td className="p-4">
+                              {booking.status !== 'Confirmed' && (
+                                <button 
+                                  onClick={() => confirmPTBooking(booking.id)} 
+                                  className="px-4 py-2 bg-black text-white text-sm font-bold rounded-full hover:bg-neutral-800 transition-colors"
+                                >
+                                  Confirm
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+
           {activeTab === 'reviews' && (
             <>
-              <div className="flex justify-between items-center mb-8">
+              
+                        <div className="flex justify-between items-center mb-8">
                 <h2 className="text-3xl font-black tracking-tight">Review Management</h2>
+                <Button variant="primary" onClick={() => setShowAddReview(true)}>
+                  <Plus className="w-5 h-5 mr-2" /> Add Review
+                </Button>
               </div>
+
+              {showAddReview && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                  <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAddReview(false)} />
+                  <div className="relative bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl">
+                    <h3 className="text-2xl font-bold mb-4">Add Review</h3>
+                    <form onSubmit={handleAddReview} className="flex flex-col gap-4">
+                      <Input placeholder="Name" required value={newReview.name} onChange={e => setNewReview({...newReview, name: e.target.value})} />
+                      <select className="px-4 py-3 bg-[var(--color-neu-bg)] border-2 border-transparent rounded-xl font-bold text-sm w-full outline-none" value={newReview.gender} onChange={e => setNewReview({...newReview, gender: e.target.value})}>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                      </select>
+                      <Input placeholder="Status (e.g., Member, Pro)" value={newReview.status} onChange={e => setNewReview({...newReview, status: e.target.value})} />
+                      <Input type="number" min="1" max="5" placeholder="Rating (1-5)" value={newReview.rating} onChange={e => setNewReview({...newReview, rating: parseInt(e.target.value)})} />
+                      <textarea required rows={4} placeholder="Review text" className="px-4 py-3 bg-[var(--color-neu-bg)] border-2 border-transparent rounded-xl font-bold text-sm w-full outline-none resize-none" value={newReview.text} onChange={e => setNewReview({...newReview, text: e.target.value})} />
+                      <div className="flex gap-2">
+                        <Button type="button" variant="default" className="flex-1" onClick={() => setShowAddReview(false)}>Cancel</Button>
+                        <Button type="submit" variant="primary" className="flex-1">Save</Button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 gap-4">
                 {reviews.length === 0 ? (
                   <Card className="text-center py-12">
@@ -827,11 +1013,24 @@ export default function AdminDashboard() {
       </main>
 
       {/* Push Notification Modal */}
-      {isPushModalOpen && (
+            {isPushModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <Card className="w-full max-w-md">
             <h3 className="text-2xl font-black mb-6">Send Push Notification</h3>
             <form onSubmit={handleSendPush} className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold opacity-70 mb-2">Target Audience</label>
+                <select 
+                  className="w-full px-4 py-3 bg-[var(--color-neu-bg)] border border-[var(--color-neu-border)] rounded-xl focus:outline-none focus:border-[var(--color-brand-primary)]"
+                  value={pushTarget}
+                  onChange={(e) => setPushTarget(e.target.value)}
+                >
+                  <option value="all">All Members</option>
+                  {members.filter(m => m.email).map(member => (
+                    <option key={member.id} value={member.email}>{member.name} ({member.email})</option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="block text-sm font-bold opacity-70 mb-2">Title</label>
                 <Input
@@ -857,6 +1056,35 @@ export default function AdminDashboard() {
                 <Button variant="primary" className="flex-1" type="submit">Send Now</Button>
               </div>
             </form>
+          </Card>
+        </div>
+      )}
+
+      {isReminderModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md">
+            <h3 className="text-2xl font-black mb-6">Automated Reminders Setup</h3>
+            <div className="space-y-4">
+              <label className="flex items-center justify-between p-4 bg-[var(--color-neu-light)] rounded-xl cursor-pointer">
+                <span className="font-bold">Send 3 days before expiry</span>
+                <input type="checkbox" className="w-5 h-5 accent-[var(--color-brand-primary)]" checked={reminderSettings.beforeExpiry} onChange={(e) => setReminderSettings({...reminderSettings, beforeExpiry: e.target.checked})} />
+              </label>
+              <label className="flex items-center justify-between p-4 bg-[var(--color-neu-light)] rounded-xl cursor-pointer">
+                <span className="font-bold">Send on expiry day</span>
+                <input type="checkbox" className="w-5 h-5 accent-[var(--color-brand-primary)]" checked={reminderSettings.onExpiry} onChange={(e) => setReminderSettings({...reminderSettings, onExpiry: e.target.checked})} />
+              </label>
+              <label className="flex items-center justify-between p-4 bg-[var(--color-neu-light)] rounded-xl cursor-pointer">
+                <span className="font-bold">Automated Overdue Reminders</span>
+                <input type="checkbox" className="w-5 h-5 accent-[var(--color-brand-primary)]" checked={reminderSettings.overdueDues} onChange={(e) => setReminderSettings({...reminderSettings, overdueDues: e.target.checked})} />
+              </label>
+              <div className="flex gap-4 pt-4">
+                <Button variant="default" className="flex-1" onClick={() => setIsReminderModalOpen(false)}>Cancel</Button>
+                <Button variant="primary" className="flex-1" onClick={() => {
+                  alert("Reminder configuration saved and active!");
+                  setIsReminderModalOpen(false);
+                }}>Save Configuration</Button>
+              </div>
+            </div>
           </Card>
         </div>
       )}

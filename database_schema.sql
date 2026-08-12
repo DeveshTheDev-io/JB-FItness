@@ -131,7 +131,7 @@ INSERT INTO reviews (name, gender, status, rating, text) VALUES
 
 -- Insert Dummy Data for Messages
 INSERT INTO messages (user_email, title, message, is_read) VALUES 
-('john@example.com', 'Welcome!', 'Welcome to Jai Balaji Elite Fitness. We are glad to have you here.', true),
+('john@example.com', 'Welcome!', 'Welcome to Jai Balaji Fitness. We are glad to have you here.', true),
 ('jane@example.com', 'Plan Expiring Soon', 'Your Basic plan is expiring in 20 days. Consider renewing it to maintain access.', false);
 
 -- Insert Dummy Data for AI Plans

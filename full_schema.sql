@@ -54,6 +54,14 @@ CREATE TABLE IF NOT EXISTS public.members (
     plan TEXT,
     status TEXT DEFAULT 'Active',
     visit TEXT,
+    gender TEXT,
+    photo_url TEXT,
+    dob TEXT,
+    phone TEXT,
+    address TEXT,
+    streak_count INTEGER DEFAULT 0,
+    last_workout_date DATE,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -176,4 +184,15 @@ CREATE TABLE IF NOT EXISTS public.workout_logs (
     weight DECIMAL NOT NULL,
     reps INTEGER NOT NULL,
     completed_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 12. Reviews Table
+CREATE TABLE IF NOT EXISTS public.reviews (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    gender TEXT,
+    status TEXT,
+    rating INTEGER DEFAULT 5,
+    text TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
