@@ -7,11 +7,10 @@ dotenv.config();
 
 export const apiRouter = express.Router();
 const supabase = createClient(process.env.VITE_SUPABASE_URL || '', process.env.VITE_SUPABASE_ANON_KEY || '');
-let ai;
-try {
-  ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-} catch (e) {
-  console.log("Gemini API not configured properly.");
+function getAI() {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error("GEMINI_API_KEY is missing in your Vercel Environment Variables. Please add it and redeploy.");
+  return new GoogleGenAI({ apiKey: key });
 }
 
 apiRouter.use(express.json({ limit: '50mb' }));
@@ -20,7 +19,7 @@ apiRouter.use(express.urlencoded({ limit: '50mb', extended: true }));
 apiRouter.post("/api/ai/workout-advice", async (req, res) => {
     try {
       const { goal, experience } = req.body;
-      const response = await ai.models.generateContent({
+      const response = await getAI().models.generateContent({
         model: "gemini-3.1-flash-lite",
         contents: `I am a gym member with ${experience} experience. My goal is ${goal}. Give me a short 3-bullet point advice on my routine.`,
       });
@@ -40,7 +39,7 @@ apiRouter.post("/api/ai/workout-advice", async (req, res) => {
         prompt = `You are a data analyst for a gym. Analyze this historical data: ${membersData}. Provide a concise prediction for peak hours for the upcoming week and revenue trends for the next month. Format as a short paragraph.`;
       }
       
-      const response = await ai.models.generateContent({
+      const response = await getAI().models.generateContent({
         model: "gemini-3.1-flash-lite",
         contents: prompt,
       });
@@ -54,7 +53,7 @@ apiRouter.post("/api/ai/workout-advice", async (req, res) => {
   apiRouter.post("/api/ai/planner", async (req, res) => {
     try {
       const { goal, weight, diet } = req.body;
-      const response = await ai.models.generateContent({
+      const response = await getAI().models.generateContent({
         model: "gemini-3.1-flash-lite",
         contents: `Generate a 4-week workout and diet plan for a gym member. Goal: ${goal}. Current weight: ${weight}kg. Diet preference: ${diet}. Respond in valid JSON format with this structure: { "workoutPlan": [{ "week": 1, "focus": "...", "exercises": ["..."] }], "dietPlan": { "dailyCalories": 2000, "macros": "...", "meals": ["..."] } }`,
         config: { responseMimeType: "application/json" }
@@ -69,7 +68,7 @@ apiRouter.post("/api/ai/workout-advice", async (req, res) => {
     apiRouter.post("/api/ai/machine-guide", async (req, res) => {
     try {
       const { fileData, mimeType } = req.body;
-      const response = await ai.models.generateContent({
+      const response = await getAI().models.generateContent({
         model: "gemini-3.1-flash-lite",
         contents: [
           {
@@ -92,7 +91,7 @@ apiRouter.post("/api/ai/workout-advice", async (req, res) => {
     try {
       const { fileData, mimeType, exercise } = req.body;
       
-      const response = await ai.models.generateContent({
+      const response = await getAI().models.generateContent({
         model: "gemini-3.1-flash-lite",
         contents: [
           {
@@ -139,7 +138,7 @@ apiRouter.post("/api/ai/workout-advice", async (req, res) => {
       
       const systemInstruction = "You are a friendly, 24/7 AI gym receptionist and personal coach for JB Fitness named JB Fitness A.I. You understand and can reply fluently in both Hinglish (Hindi written in English alphabet) and English, depending on what language the user speaks. You can answer questions about website plans, community events, gym rules, class schedules (Yoga at 6 PM Tue/Thu, HIIT at 7 AM Mon/Wed), and general fitness advice. IMPORTANT RULE: Information specifically about diet and workouts MUST ONLY be given to members having an active plan purchased. Current User Status: " + memberStatusText + ". If the user's status is 'Guest' or 'Expired' and they ask for diet plans, workout routines, or specific exercise/diet advice, politely inform them that they need to purchase or renew a plan to access premium diet and workout features. You can still talk about general topics like gym timings, prices, and features. You have tools to check the user's workout history and book classes for them. Be concise, engaging, and helpful. Format your responses in a highly professional, well-structured manner using markdown bullet points, bold text for emphasis, and short paragraphs to make it easily readable.";
 
-      const chat = ai.chats.create({
+      const chat = getAI().chats.create({
         model: "gemini-3.1-flash-lite",
         config: {
           systemInstruction,
@@ -217,7 +216,7 @@ apiRouter.post("/api/ai/workout-advice", async (req, res) => {
   apiRouter.post("/api/ai/diet-tracker", async (req, res) => {
     try {
       const { fileData, mimeType } = req.body;
-      const response = await ai.models.generateContent({
+      const response = await getAI().models.generateContent({
         model: "gemini-3.1-flash-lite",
         contents: [
           {
@@ -240,7 +239,7 @@ apiRouter.post("/api/ai/workout-advice", async (req, res) => {
   apiRouter.post("/api/ai/predictive-maintenance", async (req, res) => {
     try {
       const { reports } = req.body;
-      const response = await ai.models.generateContent({
+      const response = await getAI().models.generateContent({
         model: "gemini-3.1-flash-lite",
         contents: `Analyze these gym equipment fault reports: ${JSON.stringify(reports)}. Predict which high-use machines need maintenance. Respond in valid JSON format with this structure: { "predictions": [{ "machine": "...", "urgency": "High|Medium|Low", "reason": "..." }] }`,
         config: { responseMimeType: "application/json" }
