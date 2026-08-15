@@ -11,8 +11,6 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminLogin from './pages/AdminLogin';
 import CommunityPage from './pages/CommunityPage';
 import AboutUs from './pages/AboutUs';
-import GymChatbot from './components/GymChatbot';
-
 export default function App() {
   return (
     <BrowserRouter>
@@ -24,7 +22,6 @@ export default function App() {
         <Route path="/community" element={<CommunityPage />} />
         <Route path="/about" element={<AboutUs />} />
       </Routes>
-      <GymChatbot />
     </BrowserRouter>
   );
 }

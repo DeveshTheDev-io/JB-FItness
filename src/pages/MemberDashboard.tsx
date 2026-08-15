@@ -555,12 +555,6 @@ const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
             { id: 'progress', icon: LineChartIcon, label: 'Progress Tracking' },
             { id: 'messages', icon: Bell, label: `Messages ${myMessages.filter(m => !m.is_read).length > 0 ? `(${myMessages.filter(m => !m.is_read).length})` : ''}` },
             { id: 'myplans', icon: ClipboardList, label: 'My Plans & Attendance' },
-            { id: 'aicoach', icon: Wind, label: 'Smart Planner' },
-            { id: 'diettracker', icon: Activity, label: 'Diet Tracker' },
-            { id: 'formchecker', icon: Activity, label: 'Form Checker' },
-            { id: 'machineguide', icon: Camera, label: 'Machine Guide' },
-            { id: 'buddymatcher', icon: Users, label: 'Buddy Matcher' },
-            { id: 'achievements', icon: Activity, label: 'Achievements' },
             { id: 'classes', icon: Calendar, label: 'Book Classes' },
             { id: 'ptbooking', icon: UserPlus, label: 'Book PT Session' },
             { id: 'profile', icon: User, label: 'Profile Settings' },
@@ -591,7 +585,6 @@ const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
               <tab.icon className="w-5 h-5 shrink-0" />
               <span className="flex-1 flex items-center justify-between min-w-0">
                 <span className="truncate">{tab.label}</span>
-                {isTabLocked(tab.id) && <Lock className="w-4 h-4 text-neutral-400 ml-2 shrink-0" />}
               </span>
             </Button>
           ))}

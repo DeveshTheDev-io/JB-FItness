@@ -6,7 +6,11 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export const apiRouter = express.Router();
-const supabase = createClient(process.env.VITE_SUPABASE_URL || '', process.env.VITE_SUPABASE_ANON_KEY || '');
+const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
+const supabase = (supabaseUrl && supabaseUrl.startsWith('http')) 
+  ? createClient(supabaseUrl, supabaseAnonKey) 
+  : null as any;
 function getAI() {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY is missing in your Vercel Environment Variables. Please add it and redeploy.");
