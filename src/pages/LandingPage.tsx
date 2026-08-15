@@ -675,7 +675,7 @@ export default function LandingPage() {
                 {
                   name: "Priya Sharma",
                   gym_status: "Member",
-                  review_text: "Love the AI features! The smart planner completely changed my workout routine. Seeing progress faster than ever.",
+                  review_text: "Love the atmosphere! The trainers completely changed my workout routine. Seeing progress faster than ever.",
                   rating: 5
                 },
                 {
@@ -687,7 +687,7 @@ export default function LandingPage() {
                 {
                   name: "Neha Gupta",
                   gym_status: "Member",
-                  review_text: "Best gym experience I've had. The smart AI diet recommendations are spot on and super easy to follow.",
+                  review_text: "Best gym experience I've had. The workout recommendations and guidance are spot on and super easy to follow.",
                   rating: 5
                 },
                 {
@@ -711,7 +711,7 @@ export default function LandingPage() {
                 {
                   name: "Amit Kumar",
                   gym_status: "Member",
-                  review_text: "Value for money is incredible. The 12-month Pro plan with AI tracking is a steal for the results I'm getting.",
+                  review_text: "Value for money is incredible. The 12-month plan is a steal for the results I'm getting.",
                   rating: 5
                 }
               ]), ...(reviews.length > 0 ? reviews : [
@@ -760,7 +760,7 @@ export default function LandingPage() {
                 {
                   name: "Amit Kumar",
                   gym_status: "Member",
-                  review_text: "Value for money is incredible. The 12-month Pro plan with AI tracking is a steal for the results I'm getting.",
+                  review_text: "Value for money is incredible. The 12-month plan is a steal for the results I'm getting.",
                   rating: 5
                 }
               ])].map((review, i) => (
