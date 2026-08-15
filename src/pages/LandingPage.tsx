@@ -620,112 +620,29 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* AI Features Section */}
-      <section id="ai-features" className="w-full flex flex-col px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2 pt-10">
-        <div className="flex flex-col gap-1.5 md:gap-2">
-          <div className="rounded-xl md:rounded-2xl bg-black border border-stone-800 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_10px_30px_rgba(0,0,0,0.2)] p-5 md:p-10 flex flex-col justify-center items-center text-center">
-            <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-bold text-white leading-tight drop-shadow-md">Next-Gen AI Features</h2>
-            <p className="text-white/70 max-w-2xl mt-4 text-lg">Experience the future of fitness with our custom-built multimodal AI tools, designed to track, match, and predict your path to success.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mt-2">
-            {[
-              {
-                title: 'Snap & Count AI Diet',
-                desc: 'Take a picture of your food. Gemini AI instantly estimates calories, protein, carbs, and fats directly to your log.',
-                icon: '📸'
-              },
-              {
-                title: 'AI Smart Programming',
-                desc: 'Hyper-personalized workout and diet generator based on your goals, injuries, and biometric feedback.',
-                icon: '🧠'
-              },
-              {
-                title: 'AI Gym Buddy Matcher',
-                desc: 'Find your perfect training partner. Our AI matches you based on goals and attendance times.',
-                icon: '🤝'
-              },
-              {
-                title: 'AI Form Check',
-                desc: 'Real-time biomechanics feedback using advanced computer vision to correct posture and prevent injuries.',
-                icon: '👁️'
-              },
-              {
-                title: 'AI Gym Receptionist',
-                desc: 'A 24/7 digital personal trainer that handles your class bookings, queries, and workout history instantly.',
-                icon: '🤖'
-              },
-              {
-                title: 'Gamified AI Achievements',
-                desc: 'Earn stunning, shareable badges for hitting milestones, calculated dynamically based on your progress logs.',
-                icon: '🏆'
-              },
-              {
-                title: 'Predictive Maintenance',
-                desc: 'Smart facility management predicting equipment faults before they happen based on member reports and usage.',
-                icon: '🔧'
-              },
-              {
-                title: 'AI Recovery Tracker',
-                desc: 'Connect your wearables. Our AI analyzes your sleep and strain to recommend optimal rest days and active recovery.',
-                icon: '⌚'
-              },
-              {
-                title: 'Smart Music Sync',
-                desc: 'The AI seamlessly syncs your workout tempo with curated playlists, dynamically changing BPM during intense sets.',
-                icon: '🎵'
-              }
-            ].map((feat, i) => (
-              <div key={i} className="relative rounded-xl md:rounded-2xl bg-[#0a0a0a] p-6 md:p-8 flex flex-col items-start border border-stone-800 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_10px_20px_rgba(0,0,0,0.5),0_20px_40px_rgba(0,0,0,0.5)] hover:-translate-y-2 hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_15px_30px_rgba(0,0,0,0.8),0_30px_60px_rgba(0,0,0,0.6)] transition-all duration-500 group overflow-hidden transform-gpu">
-                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-                <div className="absolute -top-24 -right-24 w-48 h-48 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-all duration-500 pointer-events-none"></div>
-                <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-b from-stone-800 to-black border border-stone-700 flex items-center justify-center text-3xl mb-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_10px_20px_rgba(0,0,0,0.5)] group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-500 ease-out">{feat.icon}</div>
-                <h3 className="relative text-xl font-bold mb-3 text-white tracking-tight drop-shadow-md">{feat.title}</h3>
-                <p className="relative text-sm font-medium text-stone-400 leading-relaxed group-hover:text-stone-300 transition-colors duration-300">{feat.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Plans Section */}
       <section id="plans" className="w-full flex flex-col px-3 md:px-5 pb-1.5 md:pb-2 gap-1.5 md:gap-2 pt-10">
         <div className="flex flex-col gap-1.5 md:gap-2">
           <div className="rounded-xl md:rounded-2xl bg-black p-5 md:p-10 flex flex-col justify-center items-center text-center">
             <h2 className="text-[clamp(2.5rem,5vw,5rem)] font-bold text-white leading-tight">Membership Plans</h2>
-            <p className="text-white/70">Transform your life with our flexible pricing & AI tools</p>
+            <p className="text-white/70">Transform your life with our flexible pricing</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1.5 md:gap-2">
             {[
-              { months: '1 Month', price: '₹2,000', desc: 'Kickstart your fitness journey.', ai: false },
-              { months: '3 Months', price: '₹5,000', desc: 'Perfect for short-term goals.', ai: false },
-              { months: '6 Months', price: '₹8,000', desc: 'Best value for serious commitment.', ai: false },
-              { months: '12 Months', price: '₹13,000', desc: 'Ultimate transformation package.', ai: false },
-              { months: '3 Months Pro', price: '₹6,000', desc: 'Perfect for short-term goals.', ai: true, features: ['AI Gym Buddy Matcher', 'Basic AI Form Check'] },
-              { months: '6 Months Elite', price: '₹11,000', desc: 'Best value for serious commitment.', ai: true, features: ['Full AI Suite', 'Snap & Count Diet', 'Smart AI Programming'] },
-              { months: '9 Months Premium', price: '₹15,000', desc: 'Advanced tracking and coaching.', ai: true, features: ['Predictive Maintenance', 'AI Form Check Pro', 'Nutrition'] },
-              { months: '1 Year Ultimate', price: '₹20,000', desc: 'Ultimate transformation package.', ai: true, features: ['All AI Features + Priority', 'Gamified Badges', '1-on-1 PT'] }
+              { months: '1 Month', price: '₹2,000', desc: 'Kickstart your fitness journey.' },
+              { months: '3 Months', price: '₹5,000', desc: 'Perfect for short-term goals.' },
+              { months: '6 Months', price: '₹8,000', desc: 'Best value for serious commitment.' },
+              { months: '12 Months', price: '₹13,000', desc: 'Ultimate transformation package.' }
             ].map((plan, i) => (
-              <div key={i} className={`rounded-xl md:rounded-2xl p-8 flex flex-col justify-between transition-colors border ${plan.ai ? 'bg-black text-white border-stone-800 hover:bg-neutral-900' : 'bg-stone-50 border-stone-100 hover:bg-stone-100'}`}>
+              <div key={i} className="rounded-xl md:rounded-2xl p-8 flex flex-col justify-between transition-colors border bg-stone-50 border-stone-100 hover:bg-stone-100">
                 <div>
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="text-2xl font-bold">{plan.months}</h3>
-                    {plan.ai && <span className="bg-white text-black text-xs font-bold px-2 py-1 rounded-full">AI Powered</span>}
                   </div>
-                  <p className={`text-sm font-semibold mb-6 ${plan.ai ? 'text-stone-400' : 'text-neutral-500'}`}>{plan.desc}</p>
-                  
-                  {plan.ai && plan.features && (
-                    <ul className="mb-6 space-y-2">
-                      {plan.features.map((feat, j) => (
-                        <li key={j} className="text-sm font-medium flex items-center gap-2 text-stone-300">
-                          <span className="text-white">✓</span> {feat}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  
+                  <p className="text-sm font-semibold mb-6 text-neutral-500">{plan.desc}</p>
                   <p className="text-5xl font-black mb-4">{plan.price}</p>
                 </div>
-                <button onClick={() => handleBuyPlan(plan)} className={`mt-4 w-full py-4 rounded-full font-bold transition-colors shadow-lg ${plan.ai ? 'bg-white text-black hover:bg-stone-200' : 'bg-black text-white hover:bg-neutral-800'}`}>Select Plan</button>
+                <button onClick={() => handleBuyPlan(plan)} className="mt-4 w-full py-4 rounded-full font-bold transition-colors shadow-lg bg-black text-white hover:bg-neutral-800">Select Plan</button>
               </div>
             ))}
           </div>
@@ -807,7 +724,7 @@ export default function LandingPage() {
                 {
                   name: "Priya Sharma",
                   gym_status: "Member",
-                  review_text: "Love the AI features! The smart planner completely changed my workout routine. Seeing progress faster than ever.",
+                  review_text: "Love the atmosphere! The trainers completely changed my workout routine. Seeing progress faster than ever.",
                   rating: 5
                 },
                 {
@@ -819,7 +736,7 @@ export default function LandingPage() {
                 {
                   name: "Neha Gupta",
                   gym_status: "Member",
-                  review_text: "Best gym experience I've had. The smart AI diet recommendations are spot on and super easy to follow.",
+                  review_text: "Best gym experience I've had. The workout recommendations and guidance are spot on and super easy to follow.",
                   rating: 5
                 },
                 {
