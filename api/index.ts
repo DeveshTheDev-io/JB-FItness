@@ -1,5 +1,5 @@
 import express from "express";
-import { generateGeminiContent, supabase } from "./_shared";
+import { generateGeminiContent, supabase } from "../lib/ai";
 import dotenv from "dotenv";
 
 dotenv.config();

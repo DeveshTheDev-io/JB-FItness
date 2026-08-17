@@ -1,4 +1,4 @@
-import { generateGeminiContent, supabase } from "./_shared";
+import { generateGeminiContent, supabase } from "../lib/ai";
 
 export default async function handler(req: any, res: any) {
   let aiStatus = "unknown";

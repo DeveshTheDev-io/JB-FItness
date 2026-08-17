@@ -1,4 +1,4 @@
-import { generateGeminiContent } from "../_shared";
+import { generateGeminiContent } from "../../lib/ai";
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
