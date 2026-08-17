@@ -1,4 +1,14 @@
-import { generateGeminiContent, supabase } from "../../lib/ai";
+import { createClient } from '@supabase/supabase-js';
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+
+const supabase = (supabaseUrl && supabaseUrl.startsWith('http') && supabaseAnonKey) 
+  ? createClient(supabaseUrl, supabaseAnonKey) 
+  : null as any;
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -75,12 +85,29 @@ GENERAL GYM INFORMATION (Open to all):
 - Timings: Monday to Saturday: 6:00 AM – 10:00 PM | Sunday: 7:00 AM – 1:00 PM
 - Class Schedules: Yoga & Mobility (6:00 PM Tue/Thu), HIIT Cardio (7:00 AM Mon/Wed), Powerlifting 101.`;
 
-    const result = await generateGeminiContent({
-      contents,
-      systemInstruction
+    const key = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+    if (!key) {
+      return res.status(500).json({ error: "GEMINI_API_KEY is not set in environment variables." });
+    }
+
+    const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        contents
+      })
     });
 
-    res.status(200).json({ text: result.text });
+    if (!geminiRes.ok) {
+      const errText = await geminiRes.text();
+      console.error("Gemini API error:", geminiRes.status, errText);
+      return res.status(500).json({ error: `Gemini error (${geminiRes.status}): ${errText}` });
+    }
+
+    const data = await geminiRes.json();
+    const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't process that response.";
+    res.status(200).json({ text: replyText });
   } catch (error: any) {
     console.error("Chat error:", error);
     res.status(500).json({ error: error.message });
