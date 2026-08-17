@@ -591,7 +591,12 @@ const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
             >
               <tab.icon className="w-5 h-5 shrink-0" />
               <span className="flex-1 flex items-center justify-between min-w-0">
-                <span className="truncate">{tab.label}</span>
+                <span className="truncate flex items-center gap-2">
+                  {tab.label}
+                  {tab.id === 'myplans' && !myAttendance.some(a => new Date(a.check_in_time).toDateString() === new Date().toDateString()) && (
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping inline-block" title="Attendance Pending Today" />
+                  )}
+                </span>
                 {isTabLocked(tab.id) && <Lock className="w-4 h-4 text-neutral-400 ml-2 shrink-0" />}
               </span>
             </Button>
@@ -630,7 +635,53 @@ const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
       </motion.aside>
 
             {/* Main Content */}
-      <main className="flex-1 p-6 overflow-y-auto">
+      <main className="flex-1 p-4 md:p-6 overflow-y-auto">
+        {/* Prominent Red Alert Banner: Attendance Reminder */}
+        {myAttendance.length >= 0 && !myAttendance.some(a => new Date(a.check_in_time).toDateString() === new Date().toDateString()) && (
+          <div className="max-w-4xl mx-auto mb-6">
+            <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white p-4 sm:p-5 rounded-2xl shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-red-400/30 animate-pulse">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0 shadow-inner">
+                  <span className="text-xl">🚨</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="bg-white text-red-700 text-[10px] uppercase font-black px-2 py-0.5 rounded-full tracking-wider">
+                      ATTENDANCE PENDING
+                    </span>
+                    <span className="text-xs text-red-100 font-semibold">Today's Session</span>
+                  </div>
+                  <h4 className="font-black text-base sm:text-lg mt-0.5 leading-tight">
+                    You haven't marked your gym attendance today!
+                  </h4>
+                  <p className="text-xs text-red-100 mt-0.5 opacity-90">
+                    Mark your daily attendance now to maintain your workout streak & consistency records.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="primary"
+                className="w-full sm:w-auto px-6 py-2.5 bg-white text-red-700 hover:bg-neutral-100 font-black text-sm shrink-0 shadow-lg border-0"
+                onClick={async () => {
+                  if (!supabase || !memberInfo?.id) {
+                    setActiveTab('myplans');
+                    return;
+                  }
+                  const { data, error } = await supabase.from('attendance').insert([{ member_id: memberInfo.id }]).select().single();
+                  if (!error) {
+                    setMyAttendance(prev => [data || { id: Date.now(), check_in_time: new Date().toISOString() }, ...prev]);
+                    alert("🎉 Attendance Marked Successfully! Keep crushing your goals!");
+                  } else {
+                    setActiveTab('myplans');
+                  }
+                }}
+              >
+                Mark Attendance Now
+              </Button>
+            </div>
+          </div>
+        )}
+
         <motion.div
           key={activeTab}
           initial={{ opacity: 0, y: 20 }}
