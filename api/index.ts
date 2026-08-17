@@ -10,6 +10,8 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+export const apiRouter = express.Router();
+
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
 const supabase = (supabaseUrl && supabaseUrl.startsWith('http') && supabaseAnonKey) 
@@ -23,7 +25,7 @@ function getAI() {
 }
 
 // Health Check
-app.get(['/api/health', '/health', '/api'], (req, res) => {
+apiRouter.get(['/api/health', '/health', '/api'], (req, res) => {
   res.json({ status: 'ok', server: 'JB Fitness API', time: new Date().toISOString() });
 });
 
@@ -41,8 +43,8 @@ const handleWorkoutAdvice: express.RequestHandler = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-app.post("/api/ai/workout-advice", handleWorkoutAdvice);
-app.post("/ai/workout-advice", handleWorkoutAdvice);
+apiRouter.post("/api/ai/workout-advice", handleWorkoutAdvice);
+apiRouter.post("/ai/workout-advice", handleWorkoutAdvice);
 
 // 2. Admin Insights
 const handleAdminInsights: express.RequestHandler = async (req, res) => {
@@ -64,8 +66,8 @@ const handleAdminInsights: express.RequestHandler = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-app.post("/api/ai/admin-insights", handleAdminInsights);
-app.post("/ai/admin-insights", handleAdminInsights);
+apiRouter.post("/api/ai/admin-insights", handleAdminInsights);
+apiRouter.post("/ai/admin-insights", handleAdminInsights);
 
 // 3. AI Planner
 const handlePlanner: express.RequestHandler = async (req, res) => {
@@ -82,8 +84,8 @@ const handlePlanner: express.RequestHandler = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-app.post("/api/ai/planner", handlePlanner);
-app.post("/ai/planner", handlePlanner);
+apiRouter.post("/api/ai/planner", handlePlanner);
+apiRouter.post("/ai/planner", handlePlanner);
 
 // 4. Machine Guide
 const handleMachineGuide: express.RequestHandler = async (req, res) => {
@@ -107,8 +109,8 @@ const handleMachineGuide: express.RequestHandler = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-app.post("/api/ai/machine-guide", handleMachineGuide);
-app.post("/ai/machine-guide", handleMachineGuide);
+apiRouter.post("/api/ai/machine-guide", handleMachineGuide);
+apiRouter.post("/ai/machine-guide", handleMachineGuide);
 
 // 5. Form Check
 const handleFormCheck: express.RequestHandler = async (req, res) => {
@@ -132,8 +134,8 @@ const handleFormCheck: express.RequestHandler = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-app.post("/api/ai/form-check", handleFormCheck);
-app.post("/ai/form-check", handleFormCheck);
+apiRouter.post("/api/ai/form-check", handleFormCheck);
+apiRouter.post("/ai/form-check", handleFormCheck);
 
 // 6. AI Chatbot
 const handleChat: express.RequestHandler = async (req, res) => {
@@ -273,8 +275,8 @@ GENERAL GYM INFORMATION (Open to all):
     res.status(500).json({ error: error.message });
   }
 };
-app.post("/api/ai/chat", handleChat);
-app.post("/ai/chat", handleChat);
+apiRouter.post("/api/ai/chat", handleChat);
+apiRouter.post("/ai/chat", handleChat);
 
 // 7. Diet Tracker
 const handleDietTracker: express.RequestHandler = async (req, res) => {
@@ -299,8 +301,8 @@ const handleDietTracker: express.RequestHandler = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-app.post("/api/ai/diet-tracker", handleDietTracker);
-app.post("/ai/diet-tracker", handleDietTracker);
+apiRouter.post("/api/ai/diet-tracker", handleDietTracker);
+apiRouter.post("/ai/diet-tracker", handleDietTracker);
 
 // 8. Predictive Maintenance
 const handlePredictiveMaintenance: express.RequestHandler = async (req, res) => {
@@ -317,10 +319,11 @@ const handlePredictiveMaintenance: express.RequestHandler = async (req, res) => 
     res.status(500).json({ error: error.message });
   }
 };
-app.post("/api/ai/predictive-maintenance", handlePredictiveMaintenance);
-app.post("/ai/predictive-maintenance", handlePredictiveMaintenance);
+apiRouter.post("/api/ai/predictive-maintenance", handlePredictiveMaintenance);
+apiRouter.post("/ai/predictive-maintenance", handlePredictiveMaintenance);
 
-export { app as apiRouter };
+app.use(apiRouter);
+
 export default function handler(req: any, res: any) {
   return app(req, res);
 }
