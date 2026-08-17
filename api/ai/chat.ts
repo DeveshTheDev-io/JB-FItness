@@ -10,6 +10,12 @@ const supabase = (supabaseUrl && supabaseUrl.startsWith('http') && supabaseAnonK
   ? createClient(supabaseUrl, supabaseAnonKey) 
   : null as any;
 
+const MODELS = [
+  "gemini-2.0-flash",
+  "gemini-1.5-flash",
+  "gemini-2.5-flash"
+];
+
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: "Method not allowed" });
@@ -90,24 +96,33 @@ GENERAL GYM INFORMATION (Open to all):
       return res.status(500).json({ error: "GEMINI_API_KEY is not set in environment variables." });
     }
 
-    const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemInstruction }] },
-        contents
-      })
-    });
+    let lastError = "";
 
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      console.error("Gemini API error:", geminiRes.status, errText);
-      return res.status(500).json({ error: `Gemini error (${geminiRes.status}): ${errText}` });
+    for (const model of MODELS) {
+      try {
+        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemInstruction }] },
+            contents
+          })
+        });
+
+        if (geminiRes.ok) {
+          const data = await geminiRes.json();
+          const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't process that response.";
+          return res.status(200).json({ text: replyText });
+        } else {
+          lastError = await geminiRes.text();
+          console.warn(`Model ${model} failed with ${geminiRes.status}. Trying fallback model...`);
+        }
+      } catch (err: any) {
+        lastError = err.message || String(err);
+      }
     }
 
-    const data = await geminiRes.json();
-    const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't process that response.";
-    res.status(200).json({ text: replyText });
+    res.status(500).json({ error: `All Gemini models failed. Last error: ${lastError}` });
   } catch (error: any) {
     console.error("Chat error:", error);
     res.status(500).json({ error: error.message });

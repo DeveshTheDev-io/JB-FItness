@@ -10,6 +10,12 @@ export const supabase = (supabaseUrl && supabaseUrl.startsWith('http') && supaba
   ? createClient(supabaseUrl, supabaseAnonKey) 
   : null as any;
 
+const FALLBACK_MODELS = [
+  "gemini-2.0-flash",
+  "gemini-1.5-flash",
+  "gemini-2.5-flash"
+];
+
 export async function generateGeminiContent({
   contents,
   systemInstruction,
@@ -24,8 +30,6 @@ export async function generateGeminiContent({
     throw new Error("GEMINI_API_KEY is missing in your Vercel Environment Variables. Please add GEMINI_API_KEY in Vercel settings.");
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
-  
   const bodyPayload: any = {
     contents: Array.isArray(contents) ? contents : [{ role: 'user', parts: [{ text: String(contents) }] }]
   };
@@ -42,19 +46,29 @@ export async function generateGeminiContent({
     };
   }
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(bodyPayload)
-  });
+  let lastError = "";
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Gemini API HTTP error:", response.status, errorText);
-    throw new Error(`Gemini API error (${response.status}): ${errorText}`);
+  for (const model of FALLBACK_MODELS) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bodyPayload)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        return { text };
+      } else {
+        lastError = await response.text();
+        console.warn(`Model ${model} failed with ${response.status}. Trying next model...`);
+      }
+    } catch (err: any) {
+      lastError = err.message || String(err);
+    }
   }
 
-  const data = await response.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  return { text };
+  throw new Error(`All Gemini models failed. Last error: ${lastError}`);
 }
