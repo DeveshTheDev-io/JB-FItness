@@ -16,30 +16,70 @@ const MODELS = [
   "gemini-2.5-flash"
 ];
 
+// Anti-abuse IP rate limiter
+const ipRateMap = new Map<string, { count: number; resetAt: number }>();
+// Quick response cache for zero-token FAQ answers
+const faqCache = new Map<string, { reply: string; expiresAt: number }>();
+
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: "Method not allowed" });
   }
+
+  // 1. IP Rate Limiting to prevent token draining bots
+  const clientIp = req.headers['x-forwarded-for']?.toString().split(',')[0] || req.socket?.remoteAddress || 'unknown-ip';
+  const now = Date.now();
+  const rateRecord = ipRateMap.get(clientIp);
+
+  if (rateRecord && now < rateRecord.resetAt) {
+    if (rateRecord.count >= 15) {
+      const waitSec = Math.ceil((rateRecord.resetAt - now) / 1000);
+      return res.status(429).json({ 
+        text: `⏳ **Rate limit reached:** Token aur abuse protection ke liye, kripya ${waitSec} seconds wait karein. (Please wait ${waitSec}s before sending another message).` 
+      });
+    }
+    rateRecord.count += 1;
+  } else {
+    ipRateMap.set(clientIp, { count: 1, resetAt: now + 5 * 60 * 1000 });
+  }
+
   try {
-    const { message, history, user } = req.body || {};
+    let { message, history, user } = req.body || {};
     
-    // Format history for Gemini API
+    // 2. Input sanitization & character length capping (Max 400 chars)
+    let sanitizedMessage = String(message || '').trim().slice(0, 400);
+    if (!sanitizedMessage) {
+      return res.status(400).json({ text: "Please enter a valid message." });
+    }
+
+    // 3. Fast Zero-Token FAQ Cache Check
+    const normalizedKey = sanitizedMessage.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const cached = faqCache.get(normalizedKey);
+    if (cached && now < cached.expiresAt && (!user || user.status !== 'Active')) {
+      return res.status(200).json({ text: cached.reply });
+    }
+
+    // 4. Sliding Context Window (Keep only last 4 messages / 2 turns) to save 80% tokens
     const contents: any[] = [];
     if (Array.isArray(history)) {
-      for (const msg of history) {
-        contents.push({
-          role: msg.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: msg.text }]
-        });
+      const recentHistory = history.slice(-4);
+      for (const msg of recentHistory) {
+        if (msg && msg.text) {
+          contents.push({
+            role: msg.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: String(msg.text).slice(0, 300) }]
+          });
+        }
       }
     }
     // Add current user message
     contents.push({
       role: 'user',
-      parts: [{ text: String(message || '') }]
+      parts: [{ text: sanitizedMessage }]
     });
     
     let memberStatusText = "Unsubscribed / Guest (No active purchased plan)";
+    let isMemberActive = false;
     
     if (supabase && user && (user.email || user.username)) {
       try {
@@ -51,45 +91,36 @@ export default async function handler(req: any, res: any) {
         }
         const { data } = await query.single();
         if (data && data.status === 'Active' && data.plan) {
+          isMemberActive = true;
           memberStatusText = "Active Member with purchased " + data.plan + " plan";
         }
       } catch (e) {
         console.warn("Could not load member data for chat:", e);
       }
     } else if (user && user.plan && user.status === 'Active') {
+      isMemberActive = true;
       memberStatusText = "Active Member with purchased " + user.plan + " plan";
     }
     
     const systemInstruction = `You are a friendly, energetic 24/7 AI gym coach and receptionist for JB Fitness (Jai Balaji Fitness) named JB Fitness A.I.
 
 LANGUAGE RULES:
-- You are fluent in BOTH English and Hinglish (Hindi written in English alphabets, e.g. "Aapka workout routine...", "Agar aap diet chart chahte hain toh...", "Kaise madad kar sakta hoon aapki?").
-- Reply dynamically in English or Hinglish depending on how the user talks to you. You can blend motivating Hinglish & English phrases naturally (e.g. "Namaste!", "Let's crush your goals!", "Aapka transformation hamari priority hai!").
+- Fluent in English & Hinglish. Reply in Hinglish when asked in Hindi/Hinglish, and English when asked in English. Keep answers concise and motivating.
 
 CRITICAL ACCESS RULE (DIETS & WORKOUT PLANS):
 - CURRENT USER STATUS: ${memberStatusText}
-- STRICT CONDITION: Detailed diet plans, customized meal plans, calorie/macro breakdowns, exercise routines, and structured workout programs are strictly gated and ONLY available for Active Members who have purchased a membership plan.
+- Detailed diet plans, macro calculations, and custom workout routines are strictly reserved for Active Members.
 - IF USER STATUS IS "Unsubscribed / Guest" (NO ACTIVE PLAN):
-  - When the user asks for ANY diet plan, meal suggestions, calorie targets, workout routine, exercise split, or personal fitness programming:
-    - YOU MUST NOT GIVE THE DIET OR WORKOUT ROUTINE.
-    - Instead, politely explain in both English and Hinglish that personalized diet plans and custom workout routines are an exclusive premium benefit for JB Fitness active plan members.
-    - Instruct them to go to the Plans section on the website to purchase a membership plan (e.g. 1 Month, 3 Months, 6 Months, 12 Months, or Pro/Elite AI plans) to unlock full personalized diet charts, custom workouts, vision form checking, and coach support.
-    - Response Example (Hinglish/English):
-      "Namaste! Personalized workout routines aur customized diet plans sirf hamare **Active JB Fitness Plan Members** ke liye exclusive hain.
-      
-      ✨ **Plan Unlock Karne Ke Liye:**
-      Website ke **Plans** section mein jayein aur apna favorite membership plan (Basic, Pro, Elite, 3/6/12 Months) select karke buy karein. Jaise hi aapka plan activate hoga, aapko full custom diet charts, workout routines, aur AI coaching ka access mil jayega!
-      
-      Agar aapko gym timings, facilities, pricing ya class schedules ke baare mein jaanna hai, toh batayein, main madad karne ke liye tayar hoon!"
+  - If user asks for ANY diet plan, meal split, calorie target, or workout routine:
+    - Politely decline in Hinglish & English and prompt them to purchase a plan from the Plans section of our website to unlock full custom diet charts & workouts.
 - IF USER STATUS IS "Active Member":
-  - Provide full, detailed, expert-level workout routines, diet charts, calorie/macro targets, exercise guides, and recovery tips with clear markdown formatting, bold headers, and bullet points.
+  - Provide full, structured workout routines and diet charts.
 
-GENERAL GYM INFORMATION (Open to all):
+GENERAL GYM INFORMATION:
 - Location: 3rd floor, Shree Banke Bihari Plaza, Kailash Vihar, income tax office road, City Center, Gwalior - 474002 (M.P)
 - Contact: +91 8770483654 | Email: jbfitnesshubthegym@gmail.com | Instagram: @jai_balaji_fitness_gym_ (Link: https://www.instagram.com/jai_balaji_fitness_gym_?igsh=M2JlMzdxMWNlNno=)
-- Expert Coaches: Sushant Agrawal (Powerlifting), Nidhi Singh (Functional Training), Bhavendra (Bodybuilding Pro), Tushant (Strength & Conditioning).
-- Timings: Monday to Saturday: 6:00 AM – 10:00 PM | Sunday: 7:00 AM – 1:00 PM
-- Class Schedules: Yoga & Mobility (6:00 PM Tue/Thu), HIIT Cardio (7:00 AM Mon/Wed), Powerlifting 101.`;
+- Coaches: Sushant Agrawal (Powerlifting), Nidhi Singh (Functional), Bhavendra (Bodybuilding), Tushant (Strength & Conditioning).
+- Timings: Mon-Sat: 6:00 AM – 10:00 PM | Sun: 7:00 AM – 1:00 PM.`;
 
     const key = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
     if (!key) {
@@ -105,13 +136,23 @@ GENERAL GYM INFORMATION (Open to all):
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: systemInstruction }] },
-            contents
+            contents,
+            generationConfig: {
+              maxOutputTokens: isMemberActive ? 700 : 400,
+              temperature: 0.7
+            }
           })
         });
 
         if (geminiRes.ok) {
           const data = await geminiRes.json();
           const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't process that response.";
+          
+          // Cache common guest queries for 1 hour to save tokens
+          if (!isMemberActive && sanitizedMessage.length < 50) {
+            faqCache.set(normalizedKey, { reply: replyText, expiresAt: now + 60 * 60 * 1000 });
+          }
+
           return res.status(200).json({ text: replyText });
         } else {
           lastError = await geminiRes.text();

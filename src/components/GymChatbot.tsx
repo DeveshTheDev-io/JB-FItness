@@ -22,26 +22,33 @@ export default function GymChatbot() {
   }, [chatHistory, isAiLoading, isOpen]);
 
   const sendMessage = async () => {
-    if (!chatMessage.trim()) return;
+    const trimmed = chatMessage.trim();
+    if (!trimmed || isAiLoading) return;
     
-    const newMessage = { role: 'user', text: chatMessage };
-    setChatHistory([...chatHistory, newMessage]);
+    const newMessage = { role: 'user', text: trimmed };
+    setChatHistory(prev => [...prev, newMessage]);
     setChatMessage('');
     setIsAiLoading(true);
 
     try {
+      // Send only recent 4 messages to minimize token usage
+      const optimizedHistory = chatHistory.slice(-4);
+
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          message: chatMessage, 
-          history: chatHistory, 
+          message: trimmed, 
+          history: optimizedHistory, 
           user: localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')!) : null
         })
       });
       if (res.ok) {
         const data = await res.json();
         setChatHistory(prev => [...prev, { role: 'assistant', text: data.text }]);
+      } else if (res.status === 429) {
+        const data = await res.json();
+        setChatHistory(prev => [...prev, { role: 'assistant', text: data.text || "⏳ Rate limit reached. Please wait a moment before sending another message." }]);
       } else {
         setChatHistory(prev => [...prev, { role: 'assistant', text: "I'm sorry, I'm having trouble connecting right now." }]);
       }
@@ -71,7 +78,7 @@ export default function GymChatbot() {
                   </div>
                   <div>
                     <h3 className="font-bold">JB Fitness A.I</h3>
-                    <p className="text-xs opacity-80">Ask about routines, diet, workouts</p>
+                    <p className="text-xs opacity-80">24/7 Receptionist & Fitness Guide</p>
                   </div>
                 </div>
                 <button onClick={() => setIsOpen(false)} className="opacity-70 hover:opacity-100 transition-opacity">
@@ -82,7 +89,7 @@ export default function GymChatbot() {
               <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[var(--color-neu-light)]">
                 {chatHistory.length === 0 ? (
                   <div className="text-center opacity-50 mt-10 font-medium text-sm">
-                    Start a conversation...<br/>e.g. "What is a good beginner chest workout?"
+                    Start a conversation...<br/>e.g. "What are the gym timings?"
                   </div>
                 ) : (
                   chatHistory.map((msg, i) => (
@@ -105,15 +112,26 @@ export default function GymChatbot() {
                 <div ref={messagesEndRef} />
               </div>
               
-              <div className="p-3 bg-white border-t border-neutral-100 flex gap-2">
-                <Input 
-                  placeholder="Type your message..." 
-                  className="flex-1 text-sm bg-neutral-50 h-10 border-neutral-200"
-                  value={chatMessage}
-                  onChange={e => setChatMessage(e.target.value)}
-                  onKeyPress={e => e.key === 'Enter' && sendMessage()}
-                />
-                <Button variant="primary" className="h-10 px-4" onClick={sendMessage} disabled={isAiLoading}>Send</Button>
+              <div className="p-3 bg-white border-t border-neutral-100 flex flex-col gap-1">
+                <div className="flex gap-2">
+                  <Input 
+                    placeholder="Type your message (max 400 chars)..." 
+                    maxLength={400}
+                    className="flex-1 text-sm bg-neutral-50 h-10 border-neutral-200"
+                    value={chatMessage}
+                    onChange={e => setChatMessage(e.target.value)}
+                    onKeyPress={e => e.key === 'Enter' && !isAiLoading && sendMessage()}
+                    disabled={isAiLoading}
+                  />
+                  <Button variant="primary" className="h-10 px-4" onClick={sendMessage} disabled={isAiLoading || !chatMessage.trim()}>
+                    Send
+                  </Button>
+                </div>
+                {chatMessage.length > 300 && (
+                  <span className="text-[10px] text-neutral-400 text-right">
+                    {chatMessage.length}/400 chars
+                  </span>
+                )}
               </div>
             </Card>
           </motion.div>
