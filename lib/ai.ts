@@ -11,9 +11,10 @@ export const supabase = (supabaseUrl && supabaseUrl.startsWith('http') && supaba
   : null as any;
 
 const FALLBACK_MODELS = [
-  "gemini-2.0-flash",
-  "gemini-1.5-flash",
-  "gemini-2.5-flash"
+  "gemini-2.5-flash",
+  "gemini-flash-latest",
+  "gemini-flash-lite-latest",
+  "gemini-2.5-flash-lite"
 ];
 
 // 1. In-Memory Anti-Abuse Rate Limiter (IP-based)
