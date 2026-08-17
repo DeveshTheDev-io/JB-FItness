@@ -32,7 +32,8 @@ export default function MemberDashboard() {
   const ptTrainers = [
     { id: 1, name: 'Sushant Agrawal', spec: 'Powerlifting Specialist', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/Sushant.jpeg_202608011758.jpeg', rate: '₹1500/hr' },
     { id: 2, name: 'Nidhi Singh', spec: 'Functional Training', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/Nidhi.jpeg_202608011801.jpeg', rate: '₹1200/hr' },
-    { id: 3, name: 'Bhavendra', spec: 'Bodybuilding Pro', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/WhatsApp_Image_2026-08-01_at_5.15.01_202608011759.jpeg', rate: '₹1800/hr' }
+    { id: 3, name: 'Bhavendra', spec: 'Bodybuilding Pro', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/WhatsApp_Image_2026-08-01_at_5.15.01_202608011759.jpeg', rate: '₹1800/hr' },
+    { id: 4, name: 'Tushant', spec: 'Strength & Conditioning', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/Tushant%20T.jpeg', rate: '₹1600/hr' }
   ];
 
   const handlePtBooking = (e: any) => {

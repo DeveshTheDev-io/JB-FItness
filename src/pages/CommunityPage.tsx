@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { supabase } from '../lib/supabase';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Instagram } from 'lucide-react';
 
 export default function CommunityPage() {
   const navigate = useNavigate();
@@ -170,8 +170,16 @@ export default function CommunityPage() {
           <div className="flex flex-col gap-2">
             <h3 className="font-bold mb-2">Contact</h3>
             <a href="tel:+918770483654" className="text-sm opacity-70 hover:opacity-100 transition-opacity">+91 8770483654</a>
-            <p className="text-sm opacity-70">jbfitnesshubthegym@gmail.com</p>
-            <p className="text-sm opacity-70">Instagram: @jb_fitness_gym</p>
+            <a href="mailto:jbfitnesshubthegym@gmail.com" className="text-sm opacity-70 hover:opacity-100 transition-opacity">jbfitnesshubthegym@gmail.com</a>
+            <a 
+              href="https://www.instagram.com/jai_balaji_fitness_gym_?igsh=M2JlMzdxMWNlNno=" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-sm opacity-70 hover:opacity-100 hover:text-[var(--color-brand-primary)] transition-all flex items-center gap-1.5 mt-0.5"
+            >
+              <Instagram className="w-4 h-4 text-[var(--color-brand-primary)]" />
+              <span>@jai_balaji_fitness_gym_</span>
+            </a>
             <p className="text-sm opacity-70 max-w-xs mt-2">3rd floor, Shree Banke Bihari Plaza, Kailash VIhar, income tax office road, City center, Gwalior - 474002(M.P)</p>
           </div>
           <div className="flex flex-col gap-2">

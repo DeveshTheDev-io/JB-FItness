@@ -196,7 +196,8 @@ CRITICAL ACCESS RULE (DIETS & WORKOUT PLANS):
 
 GENERAL GYM INFORMATION (Open to all):
 - Location: 3rd floor, Shree Banke Bihari Plaza, Kailash Vihar, income tax office road, City Center, Gwalior - 474002 (M.P)
-- Contact: +91 8770483654 | Email: jbfitnesshubthegym@gmail.com | Instagram: @jb_fitness_gym
+- Contact: +91 8770483654 | Email: jbfitnesshubthegym@gmail.com | Instagram: @jai_balaji_fitness_gym_ (Link: https://www.instagram.com/jai_balaji_fitness_gym_?igsh=M2JlMzdxMWNlNno=)
+- Expert Coaches: Sushant Agrawal (Powerlifting), Nidhi Singh (Functional Training), Bhavendra (Bodybuilding Pro), Tushant (Strength & Conditioning).
 - Timings: Monday to Saturday: 6:00 AM – 10:00 PM | Sunday: 7:00 AM – 1:00 PM
 - Class Schedules: Yoga & Mobility (6:00 PM Tue/Thu), HIIT Cardio (7:00 AM Mon/Wed), Powerlifting 101.
 - You have tools to retrieve workout history and book classes for logged-in members.`;

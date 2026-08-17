@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Phone, Mail, Award, Users, Dumbbell, Zap } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, Mail, Award, Users, Dumbbell, Zap, Instagram } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 
 export default function AboutUs() {
@@ -135,6 +135,22 @@ export default function AboutUs() {
                   <div className="pt-1">
                     <h4 className="font-bold text-lg mb-1">Email</h4>
                     <p className="text-stone-500 font-medium leading-relaxed">jbfitnesshubthegym@gmail.com</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-5">
+                  <div className="w-14 h-14 bg-white rounded-2xl shadow-sm border border-stone-100 flex items-center justify-center shrink-0">
+                    <Instagram className="w-6 h-6 text-[var(--color-brand-primary)]" />
+                  </div>
+                  <div className="pt-1">
+                    <h4 className="font-bold text-lg mb-1">Instagram</h4>
+                    <a 
+                      href="https://www.instagram.com/jai_balaji_fitness_gym_?igsh=M2JlMzdxMWNlNno=" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-stone-700 hover:text-[var(--color-brand-primary)] font-bold leading-relaxed transition-colors"
+                    >
+                      @jai_balaji_fitness_gym_
+                    </a>
                   </div>
                 </div>
               </div>

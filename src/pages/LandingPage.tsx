@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { X, Dumbbell, MapPin } from 'lucide-react';
+import { X, Dumbbell, MapPin, Instagram } from 'lucide-react';
 
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop';
 const SECTION2_IMAGE = 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=1470&auto=format&fit=crop';
@@ -541,11 +541,12 @@ export default function LandingPage() {
             <h2 className="text-[clamp(2.5rem,5vw,5rem)] font-bold text-white leading-tight">Expert Coaches</h2>
             <p className="text-white/70">Train with the best to achieve your ultimate goals</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5 md:gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5 md:gap-2">
             {[ 
               { name: 'Sushant Agrawal', spec: 'Powerlifting Specialist', bio: 'With over a decade of experience, Sushant specializes in raw powerlifting, strength conditioning, and helping members reach peak physical performance.', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/Sushant.jpeg_202608011758.jpeg' },
               { name: 'Nidhi Singh', spec: 'Functional Training', bio: 'Nidhi is an expert in HIIT, flexibility, and functional mobility. Her unique training approach ensures you build a strong, athletic, and resilient body.', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/Nidhi.jpeg_202608011801.jpeg' },
-              { name: 'Bhavendra', spec: 'Bodybuilding Pro', bio: 'A competitive bodybuilder, Bhavendra focuses on muscle hypertrophy, diet optimization, and stage prep for serious athletes looking to transform their physique.', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/WhatsApp_Image_2026-08-01_at_5.15.01_202608011759.jpeg' }
+              { name: 'Bhavendra', spec: 'Bodybuilding Pro', bio: 'A competitive bodybuilder, Bhavendra focuses on muscle hypertrophy, diet optimization, and stage prep for serious athletes looking to transform their physique.', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/WhatsApp_Image_2026-08-01_at_5.15.01_202608011759.jpeg' },
+              { name: 'Tushant', spec: 'Strength & Conditioning', bio: 'Certified strength and conditioning specialist focused on explosive athletic power, endurance, posture alignment, and body transformation.', img: 'https://acsgzgrkwdaczasqadkn.supabase.co/storage/v1/object/public/Gym/Trainers/Tushant%20T.jpeg' }
             ].map((coach, i) => (
               <div key={i} className="rounded-xl md:rounded-2xl overflow-hidden relative group cursor-pointer aspect-[3/4] md:aspect-auto md:h-[550px] xl:h-[650px] w-full" onClick={() => setSelectedCoach(coach)}>
                 <img src={coach.img} alt={coach.name} className="absolute inset-0 w-full h-full object-cover object-[center_10%] grayscale transition-transform duration-700 group-hover:scale-110 group-hover:grayscale-0" />
@@ -881,8 +882,16 @@ export default function LandingPage() {
           <div className="flex flex-col gap-2">
             <h3 className="font-bold mb-2">Contact</h3>
             <a href="tel:+918770483654" className="text-sm opacity-70 hover:opacity-100 transition-opacity">+91 8770483654</a>
-            <p className="text-sm opacity-70">jbfitnesshubthegym@gmail.com</p>
-            <p className="text-sm opacity-70">Instagram: @jb_fitness_gym</p>
+            <a href="mailto:jbfitnesshubthegym@gmail.com" className="text-sm opacity-70 hover:opacity-100 transition-opacity">jbfitnesshubthegym@gmail.com</a>
+            <a 
+              href="https://www.instagram.com/jai_balaji_fitness_gym_?igsh=M2JlMzdxMWNlNno=" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-sm opacity-70 hover:opacity-100 hover:text-[var(--color-brand-primary)] transition-all flex items-center gap-1.5 mt-0.5"
+            >
+              <Instagram className="w-4 h-4 text-[var(--color-brand-primary)]" />
+              <span>@jai_balaji_fitness_gym_</span>
+            </a>
             <p className="text-sm opacity-70 max-w-xs mt-2">3rd floor, Shree Banke Bihari Plaza, Kailash VIhar, income tax office road, City center, Gwalior - 474002(M.P)</p>
           </div>
           <div className="flex flex-col gap-2">
