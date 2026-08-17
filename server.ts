@@ -25,8 +25,7 @@ async function startServer() {
       appType: "custom",
     });
     app.use(vite.middlewares);
-    app.use(async (req, res, next) => {
-      if (req.method !== 'GET') return next();
+    app.use('*', async (req, res, next) => {
       const url = req.originalUrl;
       try {
         let template = fs.readFileSync(path.resolve(process.cwd(), 'index.html'), 'utf-8');
@@ -40,7 +39,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.use('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
