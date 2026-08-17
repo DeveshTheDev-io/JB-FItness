@@ -29,9 +29,12 @@ async function startServer() {
       appType: "custom",
     });
     app.use(vite.middlewares);
-    app.get('*', async (req, res, next) => {
-      const url = req.originalUrl;
+    app.use(async (req, res, next) => {
+      if (req.method !== 'GET' || req.path.startsWith('/api')) {
+        return next();
+      }
       try {
+        const url = req.originalUrl || req.url;
         let template = fs.readFileSync(path.resolve(process.cwd(), 'index.html'), 'utf-8');
         template = await vite.transformIndexHtml(url, template);
         res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
