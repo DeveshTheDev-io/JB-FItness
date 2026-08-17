@@ -38,10 +38,10 @@ export default function AboutUs() {
           <div className="relative z-10">
             <p className="text-xs md:text-sm font-black uppercase tracking-[0.3em] text-stone-500 mb-6">Our Story</p>
             <h1 className="text-[clamp(3rem,6vw,5.5rem)] font-black text-black leading-[0.9] tracking-tighter mb-8">
-              Built on Strength.<br/>Driven by Excellence.
+              Built on Strength.<br/>Driven by AI.
             </h1>
             <p className="text-stone-600 max-w-2xl mx-auto text-lg md:text-xl font-medium leading-relaxed">
-              Jai Balaji Fitness is more than just a gym. It's a sanctuary for those dedicated to pushing their limits, combining top-tier equipment with expert training to build the ultimate athlete.
+              Jai Balaji Fitness is more than just a gym. It's a sanctuary for those dedicated to pushing their limits, combining old-school iron with cutting-edge artificial intelligence to build the ultimate athlete.
             </p>
           </div>
         </div>
@@ -54,7 +54,7 @@ export default function AboutUs() {
             </div>
             <h2 className="text-3xl font-black mb-5 tracking-tight">Our Mission</h2>
             <p className="text-stone-500 font-medium leading-relaxed text-lg">
-              To provide a premium, judgment-free environment where individuals can transform their bodies and minds. We strive to offer world-class equipment alongside personalized coaching, making elite fitness accessible to everyone.
+              To provide a premium, judgment-free environment where individuals can transform their bodies and minds. We strive to offer world-class equipment alongside personalized AI coaching, making elite fitness accessible to everyone.
             </p>
           </div>
 
@@ -89,8 +89,8 @@ export default function AboutUs() {
               <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-md border border-stone-800">
                 <Zap className="w-6 h-6 text-[var(--color-brand-primary)]" />
               </div>
-              <h3 className="text-xl font-bold mb-3 tracking-tight">Smart Tracking</h3>
-              <p className="text-stone-500 font-medium text-sm leading-relaxed">From workout logging to progress tracking and personal training support, our ecosystem ensures your fitness journey is optimized and safe.</p>
+              <h3 className="text-xl font-bold mb-3 tracking-tight">Smart Technology</h3>
+              <p className="text-stone-500 font-medium text-sm leading-relaxed">From real-time form checking and diet tracking to predictive maintenance, our AI ecosystem ensures your fitness journey is optimized and safe.</p>
             </div>
             
             <div className="p-8 md:p-10 text-center rounded-[2rem] bg-white/60 backdrop-blur-lg border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:bg-white/80 transition-colors">

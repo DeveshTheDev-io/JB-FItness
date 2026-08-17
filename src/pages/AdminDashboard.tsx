@@ -475,6 +475,7 @@ export default function AdminDashboard() {
         <nav className="flex flex-col gap-4 pb-4 md:pb-0">
           {[
             { id: 'overview', icon: TrendingUp, label: 'Analytics & Trends' },
+            { id: 'ai-insights', icon: Search, label: 'AI Business Insights' },
             { id: 'members', icon: Users, label: 'Member CRM' },
             { id: 'dues', icon: IndianRupee, label: 'Dues & Payments' },
             { id: 'trials', icon: ClipboardList, label: 'Trial Requests' },
