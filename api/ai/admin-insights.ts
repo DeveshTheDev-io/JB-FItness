@@ -1,4 +1,4 @@
-import { getAI } from "../_shared";
+import { generateGeminiContent } from "../_shared";
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -12,11 +12,11 @@ export default async function handler(req: any, res: any) {
       prompt = `You are a data analyst for a gym. Analyze this historical data: ${membersData}. Provide a concise prediction for peak hours for the upcoming week and revenue trends for the next month. Format as a short paragraph.`;
     }
     
-    const response = await getAI().models.generateContent({
-      model: "gemini-2.5-flash",
+    const result = await generateGeminiContent({
       contents: prompt,
+      systemInstruction: "You are an expert gym analytics consultant."
     });
-    res.status(200).json({ insights: response.text });
+    res.status(200).json({ insights: result.text });
   } catch (error: any) {
     console.error("Admin insights error:", error);
     res.status(500).json({ error: error.message });

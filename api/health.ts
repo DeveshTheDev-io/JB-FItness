@@ -1,16 +1,12 @@
-import { getAI, supabase } from "./_shared";
+import { generateGeminiContent, supabase } from "./_shared";
 
 export default async function handler(req: any, res: any) {
   let aiStatus = "unknown";
   let aiError = null;
-  let hasKey = false;
-  
+  const key = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+
   try {
-    const key = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
-    hasKey = Boolean(key);
-    const ai = getAI();
-    const result = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+    const result = await generateGeminiContent({
       contents: "Say hi in one word"
     });
     aiStatus = "ok: " + result.text;
@@ -22,7 +18,7 @@ export default async function handler(req: any, res: any) {
   res.status(200).json({ 
     status: "ok", 
     server: "JB Fitness API", 
-    hasGeminiKey: hasKey,
+    hasGeminiKey: Boolean(key),
     hasSupabase: Boolean(supabase),
     aiStatus,
     aiError,
