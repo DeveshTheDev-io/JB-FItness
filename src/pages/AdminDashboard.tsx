@@ -403,6 +403,30 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleDeleteMember = async (id: number, name: string) => {
+    if (!window.confirm(`Are you sure you want to permanently delete member "${name}" from the database and app? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      if (supabase) {
+        await supabase.from('attendance').delete().eq('member_id', id);
+        await supabase.from('workout_logs').delete().eq('member_id', id);
+        await supabase.from('class_bookings').delete().eq('member_id', id);
+        const { error } = await supabase.from('members').delete().eq('id', id);
+        if (error) {
+          alert(`Failed to delete member: ${error.message}`);
+          return;
+        }
+      }
+      setMembers(prev => prev.filter(m => m.id !== id));
+      alert(`Member "${name}" has been permanently removed.`);
+    } catch (err: any) {
+      console.error("Error deleting member:", err);
+      alert(`Error deleting member: ${err.message || 'Unknown error'}`);
+    }
+  };
+
   const markAttendance = async (id: number) => {
     if (!supabase) return;
     const now = new Date();
@@ -653,6 +677,13 @@ export default function AdminDashboard() {
                         setShowMemberModal(true);
                       }}>Edit</Button>
                       <Button variant="primary" className="flex-1 min-w-[80px] py-2 text-sm" onClick={() => handleUpgradeMember(member.id)}>Upgrade</Button>
+                      <button 
+                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors flex items-center justify-center border border-red-200" 
+                        title="Delete Member from Database" 
+                        onClick={() => handleDeleteMember(member.id, member.name)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                     {member.churnRisk === 'High' && (
                       <Button variant="default" className="w-full text-red-600 border-red-200 hover:bg-red-50 text-sm py-2" onClick={() => alert(`Sent automated 'We miss you' offer to ${member.name}!`)}>
