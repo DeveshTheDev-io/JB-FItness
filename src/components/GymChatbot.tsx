@@ -1,15 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Dumbbell, X } from 'lucide-react';
+import { Dumbbell, X, Sparkles } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import Markdown from 'react-markdown';
 
+const DEFAULT_WELCOME_MESSAGE = {
+  role: 'assistant',
+  text: `💪 **Namaste & Welcome to JB Fitness!** 🔥
+
+*"Elevating fitness standards with elite equipment, professional coaching & AI performance."*
+
+Main hoon **JB Fitness A.I.**, aapka 24/7 personal gym guide aur receptionist!
+Aap mujhse gym timings, membership plans, coaches, class schedules ya general fitness queries ke baare mein pooch sakte hain.
+
+*Kaise madad kar sakta hoon aapki aaj?*`
+};
+
 export default function GymChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
-  const [chatHistory, setChatHistory] = useState<{role: string, text: string}[]>([]);
+  const [chatHistory, setChatHistory] = useState<{role: string, text: string}[]>([DEFAULT_WELCOME_MESSAGE]);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -31,15 +43,17 @@ export default function GymChatbot() {
     setIsAiLoading(true);
 
     try {
-      // Send only recent 4 messages to minimize token usage
-      const optimizedHistory = chatHistory.slice(-4);
+      // Exclude initial welcome message from API history to save tokens
+      const apiHistory = chatHistory
+        .filter(m => m !== DEFAULT_WELCOME_MESSAGE)
+        .slice(-4);
 
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           message: trimmed, 
-          history: optimizedHistory, 
+          history: apiHistory, 
           user: localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')!) : null
         })
       });
@@ -70,15 +84,18 @@ export default function GymChatbot() {
             transition={{ duration: 0.2 }}
             className="fixed bottom-20 right-4 left-4 top-4 sm:left-auto sm:top-auto sm:bottom-24 sm:right-6 origin-bottom-right pointer-events-auto flex flex-col justify-end"
           >
-            <Card className="flex flex-col w-full h-full sm:w-[400px] sm:h-[500px] sm:max-h-[600px] p-0 overflow-hidden shadow-2xl border border-neutral-200">
+            <Card className="flex flex-col w-full h-full sm:w-[400px] sm:h-[520px] sm:max-h-[620px] p-0 overflow-hidden shadow-2xl border border-neutral-200">
               <div className="bg-[var(--color-brand-secondary)] p-4 text-white flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center shrink-0">
                     <Dumbbell className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-bold">JB Fitness A.I</h3>
-                    <p className="text-xs opacity-80">24/7 Receptionist & Fitness Guide</p>
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="font-bold">JB Fitness A.I</h3>
+                      <Sparkles className="w-3.5 h-3.5 text-[var(--color-brand-primary)] animate-pulse" />
+                    </div>
+                    <p className="text-xs opacity-80">24/7 Receptionist & Personal Coach</p>
                   </div>
                 </div>
                 <button onClick={() => setIsOpen(false)} className="opacity-70 hover:opacity-100 transition-opacity">
@@ -87,19 +104,13 @@ export default function GymChatbot() {
               </div>
               
               <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[var(--color-neu-light)]">
-                {chatHistory.length === 0 ? (
-                  <div className="text-center opacity-50 mt-10 font-medium text-sm">
-                    Start a conversation...<br/>e.g. "What are the gym timings?"
-                  </div>
-                ) : (
-                  chatHistory.map((msg, i) => (
-                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-[var(--color-brand-primary)] text-black rounded-tr-sm font-semibold' : 'bg-white rounded-tl-sm shadow-sm font-medium border border-neutral-100'}`}>
-                        <div className="markdown-body space-y-2"><Markdown>{msg.text}</Markdown></div>
-                      </div>
+                {chatHistory.map((msg, i) => (
+                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[85%] p-3.5 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-[var(--color-brand-primary)] text-black rounded-tr-sm font-semibold' : 'bg-white text-neutral-800 rounded-tl-sm shadow-sm font-medium border border-neutral-100'}`}>
+                      <div className="markdown-body space-y-2"><Markdown>{msg.text}</Markdown></div>
                     </div>
-                  ))
-                )}
+                  </div>
+                ))}
                 {isAiLoading && (
                   <div className="flex justify-start">
                     <div className="max-w-[80%] p-4 rounded-2xl font-medium bg-white rounded-tl-sm shadow-sm flex items-center gap-2 border border-neutral-100">
