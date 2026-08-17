@@ -290,4 +290,6 @@ app.post("/api/ai/predictive-maintenance", handlePredictiveMaintenance);
 app.post("/ai/predictive-maintenance", handlePredictiveMaintenance);
 
 export { app as apiRouter };
-export default app;
+export default function handler(req: any, res: any) {
+  return app(req, res);
+}
