@@ -764,7 +764,70 @@ const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
           {activeTab === 'myplans' && (
             <>
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-black tracking-tight">My Plans & Attendance</h2>
+                <div>
+                  <h2 className="text-3xl font-black tracking-tight">My Plans & Attendance</h2>
+                  <p className="text-sm opacity-70">Mark daily check-in, track workout consistency & view active memberships</p>
+                </div>
+              </div>
+
+              {/* Modern 1-Click Smart Self Check-In Card */}
+              <div className="mb-8">
+                <Card className="bg-gradient-to-r from-neutral-900 to-neutral-800 text-white p-6 rounded-2xl relative overflow-hidden border border-neutral-700 shadow-xl">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--color-brand-primary)]/10 rounded-full blur-3xl pointer-events-none" />
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-[var(--color-brand-primary)] text-black flex items-center justify-center font-black text-2xl shadow-lg shrink-0">
+                        <CheckCircle2 className="w-8 h-8" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs uppercase font-bold tracking-widest text-[var(--color-brand-primary)] bg-[var(--color-brand-primary)]/20 px-2.5 py-1 rounded-full">
+                            Smart Pass Check-In
+                          </span>
+                          <span className="text-xs opacity-70">
+                            {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                        <h3 className="text-xl font-bold mt-1">Daily Gym Check-In</h3>
+                        <p className="text-sm opacity-80 mt-0.5">
+                          {myAttendance.some(a => new Date(a.check_in_time).toDateString() === new Date().toDateString())
+                            ? "✅ You are checked in for today! Great job staying consistent."
+                            : "Tap below to mark today's gym attendance and build your streak."}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="w-full md:w-auto">
+                      {myAttendance.some(a => new Date(a.check_in_time).toDateString() === new Date().toDateString()) ? (
+                        <div className="flex items-center gap-2 bg-green-500/20 text-green-400 border border-green-500/30 px-6 py-3 rounded-2xl font-bold">
+                          <CheckCircle2 className="w-5 h-5" />
+                          <span>Checked In Today</span>
+                        </div>
+                      ) : (
+                        <Button 
+                          variant="primary" 
+                          className="w-full md:w-auto px-8 py-4 text-base font-black flex items-center justify-center gap-2 shadow-xl hover:scale-105 transition-all"
+                          onClick={async () => {
+                            if (!supabase || !memberInfo?.id) {
+                              alert("Please sign in to mark attendance.");
+                              return;
+                            }
+                            const { data, error } = await supabase.from('attendance').insert([{ member_id: memberInfo.id }]).select().single();
+                            if (!error) {
+                              setMyAttendance(prev => [data || { id: Date.now(), check_in_time: new Date().toISOString() }, ...prev]);
+                              alert("🎉 Attendance Marked Successfully! Keep crushing your goals!");
+                            } else {
+                              alert("Could not mark attendance. Please try again.");
+                            }
+                          }}
+                        >
+                          <Zap className="w-5 h-5" />
+                          <span>1-Tap Check-In Now</span>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </Card>
               </div>
               
               <div className="grid grid-cols-1 gap-6">
