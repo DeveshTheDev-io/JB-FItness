@@ -13,8 +13,7 @@ const supabase = (supabaseUrl && supabaseUrl.startsWith('http') && supabaseAnonK
 const MODELS = [
   "gemini-2.5-flash",
   "gemini-2.0-flash",
-  "gemini-2.5-pro",
-  "gemini-1.5-flash"
+  "gemini-2.0-flash-lite"
 ];
 
 // Anti-abuse IP rate limiter
